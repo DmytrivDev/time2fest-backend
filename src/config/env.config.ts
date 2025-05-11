@@ -8,6 +8,5 @@ export const env = {
     username: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
     database_core: process.env.DB_CORE,
-    database_cms: process.env.DB_CMS,
   },
 };
