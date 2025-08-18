@@ -7,33 +7,39 @@ import { getStrapiHeaders, getStrapiUrl } from '../config/strapi.config';
 export class StrapiService {
   private readonly cache = new NodeCache({ stdTTL: 300 }); // 5 хв
 
-  async get<T>(endpoint: string, useCache = true): Promise<T | null> {
-    const url = getStrapiUrl(endpoint);
-    const cacheKey = `strapi:${endpoint}`;
+  async get<T>(endpoint: string, locale?: string, useCache = true): Promise<T | null> {
+  let fullPath = endpoint;
 
-    // 👉 Якщо кеш є — віддаємо
-    if (useCache) {
-      const cached = this.cache.get<T>(cacheKey);
-      if (cached) return cached;
-    }
-
-    try {
-      const { data } = await axios.get<{ data: T }>(url, {
-        headers: getStrapiHeaders(),
-      });
-
-      const result = data.data;
-
-      if (useCache) {
-        this.cache.set(cacheKey, result);
-      }
-
-      return result;
-    } catch (error: any) {
-      console.error(`❌ StrapiService.get(${endpoint}) failed:`, error?.response?.data || error.message);
-      return null;
-    }
+  if (locale) {
+    const separator = endpoint.includes('?') ? '&' : '?';
+    fullPath += `${separator}locale=${locale}&populate=deep`;
   }
+
+  const url = getStrapiUrl(fullPath);
+  const cacheKey = `strapi:${fullPath}`;
+
+  if (useCache) {
+    const cached = this.cache.get<T>(cacheKey);
+    if (cached) return cached;
+  }
+
+  try {
+    const { data } = await axios.get<{ data: T }>(url, {
+      headers: getStrapiHeaders(),
+    });
+
+    const result = data.data;
+
+    if (useCache) {
+      this.cache.set(cacheKey, result);
+    }
+
+    return result;
+  } catch (error: any) {
+    console.error(`❌ StrapiService.get(${fullPath}) failed:`, error?.response?.data || error.message);
+    return null;
+  }
+}
 
   clearCache(endpoint?: string) {
     if (endpoint) {

@@ -1,12 +1,14 @@
-import { Controller, Get  } from '@nestjs/common';
+// src/hero-content/hero-content.controller.ts
+import { Controller, Get, Query } from '@nestjs/common';
 import { HeroContentService } from './hero-content.service';
 
-@Controller('/heroes')
+@Controller('hero')
 export class HeroContentController {
-  constructor(private readonly heroContentService: HeroContentService) {}
+  constructor(private readonly heroService: HeroContentService) {}
 
+  // GET /hero?locale=uk
   @Get()
-  async getHero() {
-    return this.heroContentService.getHero();
+  async getHero(@Query('locale') locale = 'en') {
+    return this.heroService.getHeroContent(locale);
   }
 }

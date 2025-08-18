@@ -1,16 +1,31 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { databaseCoreConfig } from './config/database.config';
-import { HeroModule } from './modules/hero/hero.module';
-import { HeroContentModule } from './modules/hero-content/hero-content.module';
-import { StrapiModule } from './modules/strapi/strapi.module';
+import { Module } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { databaseCoreConfig } from "./config/database.config";
+import { StrapiModule } from "./modules/strapi/strapi.module";
+import { HeroContentModule } from "./modules/hero-content/hero-content.module";
+import { SitemapModule } from "./modules/sitemap/sitemap.module";
+import { SeoMetaModule } from "./modules/seo-meta/seo-meta.module";
+import { TimeZoneModule } from './modules/time-zone/time-zone.module';
+import { TimeZonesModule } from './modules/time-zones/time-zones.module';
+import { CountriesModule } from './modules/countries/countries.module';
+import { AboutContentModule } from "./modules/about-content/about-content.module";
+import { BecomeContentModule } from "./modules/become-content/become-content.module";
+import { faqContentModule } from "./modules/faq-content/faq-content.module";
 
 @Module({
   imports: [
     TypeOrmModule.forRoot(databaseCoreConfig),
     StrapiModule,
-    HeroModule,
+    SeoMetaModule,
+    SitemapModule,
     HeroContentModule,
+    TimeZoneModule,
+    TimeZonesModule,
+    CountriesModule,
+    AboutContentModule,
+    BecomeContentModule,
+    faqContentModule,
+    SeoMetaModule,
   ],
 })
 export class AppModule {}

@@ -7,6 +7,6 @@ export const env = {
     port: parseInt(process.env.DB_PORT || '5432'),
     username: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
-    database_core: process.env.DB_CORE,
+    database_core: process.env.DB_NAME,
   },
 };

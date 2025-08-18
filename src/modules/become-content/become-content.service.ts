@@ -2,12 +2,12 @@ import { Injectable } from "@nestjs/common";
 import { StrapiService } from "../../services/strapi.service";
 
 @Injectable()
-export class HeroContentService {
+export class BecomeContentService {
   constructor(private readonly strapi: StrapiService) {}
 
-  async getHeroContent(locale: string) {
+  async getBecomeContent(locale: string) {
     return this.strapi.get(
-      `/home-hero-section?locale=${locale}&populate[infographik][populate]=icon`
+      `/become-streamer?locale=${locale}&populate=*`
     );
   }
 }

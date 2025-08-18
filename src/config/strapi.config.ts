@@ -4,5 +4,8 @@ export const getStrapiHeaders = () => ({
 
 export const getStrapiUrl = (endpoint: string) => {
   const base = process.env.STRAPI_URL || 'http://localhost:1337';
-  return `${base}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+
+  return `${base}/api/${cleanEndpoint}`;
 };
