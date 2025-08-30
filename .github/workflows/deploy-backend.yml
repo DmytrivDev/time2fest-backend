@@ -18,17 +18,20 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.DEPLOY_ACCESS }}
 
+      - name: Add server to known_hosts
+        run: |
+          ssh-keyscan -H 178.20.157.85 >> ~/.ssh/known_hosts
+
       - name: Sync backend code to server
         run: |
-          rsync -az --delete \
+          rsync -az \
             --exclude='.env' \
             --exclude='node_modules' \
-            --exclude='dist' \
             backend/ deploy@178.20.157.85:/home/deploy/time2fest/backend/
 
       - name: Rebuild backend container
         run: |
-          ssh -o StrictHostKeyChecking=no deploy@178.20.157.85 "
+          ssh deploy@178.20.157.85 "
             cd /home/deploy/time2fest &&
             docker compose build backend &&
             docker compose up -d backend
