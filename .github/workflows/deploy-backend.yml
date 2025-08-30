@@ -22,12 +22,19 @@ jobs:
         run: |
           ssh-keyscan -H 178.20.157.85 >> ~/.ssh/known_hosts
 
+      - name: Debug repo structure
+        run: |
+          pwd
+          ls -la
+          ls -la time2fest || true
+          ls -la time2fest/backend || true
+
       - name: Sync backend code to server
         run: |
           rsync -az \
             --exclude='.env' \
             --exclude='node_modules' \
-            backend/ deploy@178.20.157.85:/home/deploy/time2fest/backend/
+            time2fest/backend/ deploy@178.20.157.85:/home/deploy/time2fest/backend/
 
       - name: Rebuild backend container
         run: |
