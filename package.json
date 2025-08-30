@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "nest start",
     "start:dev": "ts-node src/main.ts",
+    "start:prod": "node dist/main",
     "test": "jest"
   },
   "keywords": [],
