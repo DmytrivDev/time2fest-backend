@@ -34,7 +34,7 @@ jobs:
           rsync -az \
             --exclude='.env' \
             --exclude='node_modules' \
-            time2fest/backend/ deploy@178.20.157.85:/home/deploy/time2fest/backend/
+            ./ deploy@178.20.157.85:/home/deploy/time2fest/backend/
 
       - name: Rebuild backend container
         run: |
