@@ -12,7 +12,7 @@ export class AboutContentService {
       `/about-platform?locale=${locale}&populate[items][populate]=Icon`
     );
 
-    console.log(3111);
+    console.log(4111);
 
     return data;
   }
