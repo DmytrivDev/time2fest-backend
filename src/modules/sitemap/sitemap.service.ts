@@ -13,15 +13,27 @@ export class SitemapService {
       { path: "", changefreq: "daily", priority: 1.0 }, // головна
     ];
 
-    const locales = ["uk", "en"]; // можна розширити
+    const locales = ["en", "uk", "es", "fr"]; // можна розширити
+
     staticPages.forEach((page) => {
       locales.forEach((lang) => {
-        const loc =
-          lang === "uk"
+        let loc =
+          lang === "en"
             ? `https://time2fest.com/${page.path}`
             : `https://time2fest.com/${lang}/${page.path}`;
+
+        // для головної сторінки залишаємо фінальний "/"
+        if (!page.path) {
+          loc =
+            lang === "en"
+              ? "https://time2fest.com/"
+              : `https://time2fest.com/${lang}/`;
+        } else {
+          loc = loc.replace(/\/$/, ""); // прибираємо лишній слеш тільки для внутрішніх
+        }
+
         urls.push({
-          loc: loc.replace(/\/$/, ""), // щоб без подвійних слешів
+          loc,
           changefreq: page.changefreq,
           priority: page.priority,
         });
