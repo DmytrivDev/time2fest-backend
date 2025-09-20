@@ -11,6 +11,8 @@ import { CountriesModule } from './modules/countries/countries.module';
 import { AboutContentModule } from "./modules/about-content/about-content.module";
 import { BecomeContentModule } from "./modules/become-content/become-content.module";
 import { faqContentModule } from "./modules/faq-content/faq-content.module";
+import { AboutPageTopModule } from "./modules/about-page-top/about-page-top.module";
+import { AboutPageRestModule } from "./modules/about-page-rest/about-page-rest.module";
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { faqContentModule } from "./modules/faq-content/faq-content.module";
     BecomeContentModule,
     faqContentModule,
     SeoMetaModule,
+    AboutPageTopModule,
+    AboutPageRestModule,
   ],
 })
 export class AppModule {}
