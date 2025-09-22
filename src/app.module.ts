@@ -13,6 +13,8 @@ import { BecomeContentModule } from "./modules/become-content/become-content.mod
 import { faqContentModule } from "./modules/faq-content/faq-content.module";
 import { AboutPageTopModule } from "./modules/about-page-top/about-page-top.module";
 import { AboutPageRestModule } from "./modules/about-page-rest/about-page-rest.module";
+import { AmbassPageTopModule } from "./modules/ambass-page-top/ambass-page-top.module";
+import { AmbassPageRestModule } from "./modules/ambass-page-rest/ambass-page-rest.module";
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { AboutPageRestModule } from "./modules/about-page-rest/about-page-rest.m
     SeoMetaModule,
     AboutPageTopModule,
     AboutPageRestModule,
+    AmbassPageTopModule,
+    AmbassPageRestModule,
   ],
 })
 export class AppModule {}
