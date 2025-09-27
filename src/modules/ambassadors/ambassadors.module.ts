@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
-import { AmbassadorsController } from './ambassadors.controller';
 import { AmbassadorsService } from './ambassadors.service';
+import { AmbassadorsController } from './ambassadors.controller';
+import { StrapiModule } from '../strapi/strapi.module';
 
 @Module({
-  controllers: [AmbassadorsController],
+  imports: [StrapiModule],
   providers: [AmbassadorsService],
+  controllers: [AmbassadorsController],
 })
 export class AmbassadorsModule {}

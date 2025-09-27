@@ -1,7 +1,7 @@
 import { Injectable, HttpException, HttpStatus } from "@nestjs/common";
-import { StrapiService } from "../../services/strapi.service";
-import fetch from "node-fetch";
+import { StrapiService } from '../../services/strapi.service';
 import { CreateAmbassadorDto } from "./dto/create-ambassador.dto";
+import axios from "axios";
 
 @Injectable()
 export class AmbassadorsService {
@@ -35,7 +35,6 @@ export class AmbassadorsService {
       .map(([key, value]) => {
         if (value === undefined || value === null || value === "") return null;
 
-        // Якщо об’єкт (наприклад socialLinks) → робимо JSON або список
         if (typeof value === "object") {
           const sub = Object.entries(value)
             .map(([subKey, subVal]) => `   • ${subKey}: ${subVal}`)
@@ -49,18 +48,14 @@ export class AmbassadorsService {
 
     const message = `🔔 Нова заявка Time2Fest\n\n${lines.join("\n")}`;
 
-    await fetch(URI_API, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: CHAT_ID,
-        text: message,
-        parse_mode: "Markdown",
-      }),
+    await axios.post(URI_API, {
+      chat_id: CHAT_ID,
+      text: message,
+      parse_mode: "Markdown",
     });
   }
 
   private async sendToStrapi(data: CreateAmbassadorDto) {
-    return this.strapi.post("/ambassadors", { data });
+    return this.strapi.post("/ambassadors", data); // StrapiService вже обгортає { data }
   }
 }
