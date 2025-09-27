@@ -24,7 +24,7 @@ export class AmbassadorsService {
       console.error(
         "❌ processApplication failed:",
         err?.response?.data || err.message || err
-      );
+      ); 
       throw new HttpException(
         err?.response?.data || "Помилка при обробці заявки",
         HttpStatus.BAD_REQUEST
