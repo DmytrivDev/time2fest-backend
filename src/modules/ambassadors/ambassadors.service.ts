@@ -1,5 +1,5 @@
 import { Injectable, HttpException, HttpStatus } from "@nestjs/common";
-import { StrapiService } from '../../services/strapi.service';
+import { StrapiService } from "../../services/strapi.service";
 import { CreateAmbassadorDto } from "./dto/create-ambassador.dto";
 import axios from "axios";
 
@@ -9,17 +9,24 @@ export class AmbassadorsService {
 
   async processApplication(data: CreateAmbassadorDto) {
     try {
+      console.log("👉 Received DTO:", data);
+
       // 1. Надсилаємо в Telegram
       await this.sendToTelegram(data);
 
       // 2. Надсилаємо в Strapi
-      await this.sendToStrapi(data);
+      const strapiRes = await this.sendToStrapi(data);
 
-      return { success: true };
-    } catch (err) {
-      console.error(err);
+      console.log("✅ Strapi response:", strapiRes);
+
+      return { success: true, strapiRes };
+    } catch (err: any) {
+      console.error(
+        "❌ processApplication failed:",
+        err?.response?.data || err.message || err
+      );
       throw new HttpException(
-        "Помилка при обробці заявки",
+        err?.response?.data || "Помилка при обробці заявки",
         HttpStatus.BAD_REQUEST
       );
     }
@@ -48,14 +55,36 @@ export class AmbassadorsService {
 
     const message = `🔔 Нова заявка Time2Fest\n\n${lines.join("\n")}`;
 
-    await axios.post(URI_API, {
-      chat_id: CHAT_ID,
-      text: message,
-      parse_mode: "Markdown",
-    });
+    console.log("📤 Sending to Telegram:", message);
+
+    try {
+      const res = await axios.post(URI_API, {
+        chat_id: CHAT_ID,
+        text: message,
+        parse_mode: "Markdown",
+      });
+      console.log("✅ Telegram response:", res.data);
+    } catch (err: any) {
+      console.error(
+        "❌ Telegram send failed:",
+        err?.response?.data || err.message || err
+      );
+    }
   }
 
   private async sendToStrapi(data: CreateAmbassadorDto) {
-    return this.strapi.post("/ambassadors", data); // StrapiService вже обгортає { data }
+    console.log("📤 Sending to Strapi:", data);
+
+    try {
+      const res = await this.strapi.post("/ambassadors", { data }); // 👈 важливо обгорнути у { data }
+      console.log("✅ Strapi POST success");
+      return res;
+    } catch (err: any) {
+      console.error(
+        "❌ Strapi POST failed:",
+        err?.response?.data || err.message || err
+      );
+      throw err;
+    }
   }
 }
