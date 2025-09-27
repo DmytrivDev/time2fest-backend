@@ -8,7 +8,6 @@ export class AmbassadorsController {
 
   @Post()
   async create(@Body() data: CreateAmbassadorDto) {
-    console.log("👉 RAW BODY:", data); // ✅ тепер бачиш, що реально прилітає
     return this.ambassadorsService.processApplication(data);
   }
 }
