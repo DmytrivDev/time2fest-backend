@@ -5,7 +5,7 @@ import { StrapiService } from "../../services/strapi.service";
 @Injectable()
 export class SeoMetaService {
   constructor(private readonly strapi: StrapiService) {}
-
+ 
   async getSeoMeta(page: string, locale: string) {
     let collection = "";
 
