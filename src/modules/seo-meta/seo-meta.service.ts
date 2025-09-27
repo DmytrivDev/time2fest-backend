@@ -12,8 +12,6 @@ export class SeoMetaService {
 
     if (page === "home") {
       collection = `${page}-seo-meta`; // home-seo-meta, about-seo-meta
-    } else if(page === "AmbassadorForm") {
-      collection = `${page}`;
     } else {
       collection = `${page}-page`;
     }
