@@ -16,6 +16,7 @@ import { AboutPageRestModule } from "./modules/about-page-rest/about-page-rest.m
 import { AmbassPageTopModule } from "./modules/ambass-page-top/ambass-page-top.module";
 import { AmbassPageRestModule } from "./modules/ambass-page-rest/ambass-page-rest.module";
 import { AmbassadorsModule } from "./modules/ambassadors/ambassadors.module";
+import { TextModule } from "./modules/text/text.module";
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { AmbassadorsModule } from "./modules/ambassadors/ambassadors.module";
     AmbassPageTopModule,
     AmbassPageRestModule,
     AmbassadorsModule,
+    TextModule,
   ],
 })
 export class AppModule {}
