@@ -12,6 +12,9 @@ export class SitemapService {
     const staticPages = [
       { path: "", changefreq: "daily", priority: 1.0 }, // головна
       { path: "privacy", changefreq: "monthly", priority: 0.2 },
+      { path: "agreement", changefreq: "monthly", priority: 0.2 },
+      { path: "disclaimer", changefreq: "monthly", priority: 0.2 },
+      { path: "terms", changefreq: "monthly", priority: 0.2 },
     ];
 
     const locales = ["en", "uk", "es", "fr"]; // можна розширити
