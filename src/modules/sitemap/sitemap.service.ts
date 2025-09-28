@@ -11,7 +11,7 @@ export class SitemapService {
     // 📌 1. Статичні сторінки
     const staticPages = [
       { path: "", changefreq: "daily", priority: 1.0 }, // головна
-      { path: "privacy", changefreq: "daily", priority: 1.0 },
+      { path: "privacy", changefreq: "monthly", priority: 0.2 },
     ];
 
     const locales = ["en", "uk", "es", "fr"]; // можна розширити
