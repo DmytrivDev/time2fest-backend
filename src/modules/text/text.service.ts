@@ -6,9 +6,9 @@ export class TextService {
   constructor(private readonly strapi: StrapiService) {}
 
   async getTextPage(page: string, locale: string) {
-    // автоматично будуємо endpoint під Strapi
-    // наприклад: privacy → /privacy-page
-    const endpoint = `/${page}-page?locale=${locale}&populate[Hero][populate]=*`;
+    const componentName = "TextComponent";
+
+    const endpoint = `/${page}-page?locale=${locale}&populate[${componentName}][populate]=*`;
 
     return this.strapi.get(endpoint);
   }
