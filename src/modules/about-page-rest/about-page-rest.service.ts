@@ -8,6 +8,7 @@ export class AboutPageRestService {
   async getAboutPageRest(locale: string) {
     const url =
       `/about-page?locale=${locale}` +
+      `&populate[WhyWe][populate][WhyWeList][populate]=Icon` +
       `&populate[Steps][populate][StrpsList][populate]=Icon` +
       `&populate[FreePlan][populate][FreePlanList][populate]=Image` +
       `&populate[PaidPlan][populate][PaidPlanList][populate]=Image` +
