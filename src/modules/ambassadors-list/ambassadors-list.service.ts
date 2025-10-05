@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { StrapiService } from "../../services/strapi.service"; 
+import { StrapiService } from "../../services/strapi.service";
 
 @Injectable()
 export class AmbassadorsListService {
