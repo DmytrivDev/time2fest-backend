@@ -11,6 +11,7 @@ export class SitemapService {
     // 📌 1. Статичні сторінки
     const staticPages = [
       { path: "", changefreq: "daily", priority: 1.0 }, // головна
+      { path: "ambassadors", changefreq: "daily", priority: 0.9 },
       { path: "become-ambassador", changefreq: "monthly", priority: 0.3 },
       { path: "privacy", changefreq: "monthly", priority: 0.2 },
       { path: "agreement", changefreq: "monthly", priority: 0.2 },
