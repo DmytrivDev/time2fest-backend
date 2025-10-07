@@ -5,17 +5,35 @@ import { AmbassadorsListService } from "./ambassadors-list.service";
 export class AmbassadorsListController {
   constructor(private readonly ambListService: AmbassadorsListService) {}
 
-  // Усі амбасадори (з можливістю фільтрувати)
+  // ---- Усі амбасадори (з фільтрацією) ----
   @Get()
   async getAll(
     @Query("locale") locale = "uk",
     @Query("timeZone") timeZone?: string,
-    @Query("countryCode") countryCode?: string
+    @Query("countryCode") countryCode?: string,
+    @Query("ids") ids?: string,
+    @Query("full") full?: string
   ) {
-    return this.ambListService.getAll(locale, timeZone, countryCode);
+    const idArray = ids
+      ? ids
+          .split(",")
+          .map((id) => Number(id.trim()))
+          .filter(Boolean)
+      : undefined;
+
+    // ---- Full вмикається лише якщо явно true ----
+    const isFull = full === "true";
+
+    return this.ambListService.getAll(
+      locale,
+      timeZone,
+      countryCode,
+      idArray,
+      isFull
+    );
   }
 
-  // Один амбасадор по ID
+  // ---- Один амбасадор ----
   @Get(":id")
   async getById(@Param("id") id: number, @Query("locale") locale = "uk") {
     return this.ambListService.getById(id, locale);
