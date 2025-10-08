@@ -5,21 +5,19 @@ import { StrapiService } from "../../services/strapi.service";
 export class AmbassadorsListService {
   constructor(private readonly strapi: StrapiService) {}
 
-  // ---- Усі амбасадори ----
   async getAll(
     locale = "uk",
     timeZone?: string,
     countryCode?: string,
     ids?: number[],
-    full = false
+    full = false,
+    rand = false,
+    count = 1,
+    exclude: number[] = []
   ) {
     const qs = new URLSearchParams();
     qs.set("locale", locale);
     qs.set("pagination[pageSize]", "100");
-
-    // ---- Повнота даних ----
-    // навіть при full=false залишаємо populate="*",
-    // бо Strapi може не повернути вкладені поля без цього
     qs.set("populate", "*");
 
     // ---- Фільтри ----
@@ -28,26 +26,24 @@ export class AmbassadorsListService {
       qs.set("filters[country][CountryCode][$eq]", countryCode.toUpperCase());
     if (ids && ids.length > 0)
       ids.forEach((id, i) => qs.set(`filters[id][$in][${i}]`, String(id)));
+    if (exclude && exclude.length > 0)
+      exclude.forEach((id, i) => qs.set(`filters[id][$notIn][${i}]`, String(id)));
 
     // ---- Запит до Strapi ----
     const resp: any = await this.strapi.get(
       `/ambassadors-lists?${qs.toString()}`
     );
     const data = resp?.data ?? resp;
-
     if (!Array.isArray(data)) return [];
 
     // ---- Формування масиву ----
-    return data.map((item: any) => {
+    let result = data.map((item: any) => {
       const attrs = item.attributes ?? item;
-
       const photo =
         attrs.Photo?.data?.attributes?.url ?? attrs.Photo?.url ?? null;
-
       const country = attrs.country?.data?.attributes ?? attrs.country ?? null;
       const tz = attrs.time_zone?.data?.attributes ?? attrs.time_zone ?? null;
 
-      // --- Базові поля ---
       const base: any = {
         id: item.id,
         slug: item.slug,
@@ -64,7 +60,6 @@ export class AmbassadorsListService {
         locale: attrs.locale,
       };
 
-      // --- Якщо full=true → додаємо всі додаткові поля ---
       if (full) {
         base.video =
           attrs.Video?.data?.attributes?.url ?? attrs.Video?.url ?? null;
@@ -81,6 +76,19 @@ export class AmbassadorsListService {
 
       return base;
     });
+
+    // ---- Виключення ID (якщо Strapi не обробив) ----
+    if (exclude.length > 0) {
+      result = result.filter((item) => !exclude.includes(item.id));
+    }
+
+    // ---- Рандомізація ----
+    if (rand && result.length > 0) {
+      const shuffled = [...result].sort(() => Math.random() - 0.5);
+      result = shuffled.slice(0, Math.min(count, result.length));
+    }
+
+    return result;
   }
 
   // ---- Один амбасадор ----
@@ -99,7 +107,6 @@ export class AmbassadorsListService {
 
     const photo =
       attrs.Photo?.data?.attributes?.url ?? attrs.Photo?.url ?? null;
-
     const country = attrs.country?.data?.attributes ?? attrs.country ?? null;
     const tz = attrs.time_zone?.data?.attributes ?? attrs.time_zone ?? null;
 
