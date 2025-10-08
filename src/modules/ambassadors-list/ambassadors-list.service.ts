@@ -50,6 +50,7 @@ export class AmbassadorsListService {
       // --- Базові поля ---
       const base: any = {
         id: item.id,
+        slug: item.slug,
         name: attrs.Name ?? "",
         description: attrs.Description ?? "",
         country: {
@@ -104,6 +105,7 @@ export class AmbassadorsListService {
 
     return {
       id: data.id,
+      slug: data.slug,
       name: attrs.Name ?? "",
       description: attrs.Description ?? "",
       fullDescription: attrs.FullDescription ?? "",
