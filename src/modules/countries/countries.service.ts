@@ -10,9 +10,10 @@ export class CountriesService {
     // нормалізуємо код країни у верхній регістр
     const normalized = countryCode.toUpperCase();
 
-    const qs = new URLSearchParams();
+    const qs = new URLSearchParams(); 
     qs.set('filters[CountryCode][$eq]', normalized);
     qs.set('locale', locale);
+    qs.set("populate", "*");
 
     const url = `/countries?${qs.toString()}`;
     return this.strapi.get(url);

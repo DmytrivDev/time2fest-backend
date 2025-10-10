@@ -17,7 +17,7 @@ export class AmbassadorsListService {
   ) {
     const qs = new URLSearchParams();
     qs.set("locale", locale);
-    qs.set("pagination[pageSize]", "100");
+    qs.set("pagination[pageSize]", "300");
     qs.set("populate", "*");
 
     // ---- Фільтри ----
