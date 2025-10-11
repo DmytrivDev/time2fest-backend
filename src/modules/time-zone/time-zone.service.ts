@@ -7,13 +7,12 @@ export class TimeZoneService {
   constructor(private readonly strapi: StrapiService) {}
 
   async getCountriesByTimeZone(code: string, locale = "uk") {
-    const qs = new URLSearchParams();
-    qs.set("filters[code][$eq]", code);
-    qs.set("locale", locale);
+    const filters = new URLSearchParams();
+    filters.set("filters[code][$eq]", code);
+    filters.set("locale", locale);
 
-    // 🧠 ось головна зміна:
-    qs.set(
-      "populate",
+    // ❗ формуємо populate окремо
+    const populate = encodeURIComponent(
       JSON.stringify({
         countries: {
           populate: [
@@ -26,9 +25,10 @@ export class TimeZoneService {
       })
     );
 
-    const resp: any = await this.strapi.get(`/time-zones?${qs.toString()}`);
+    const url = `/time-zones?${filters.toString()}&populate=${populate}`;
 
-    // Strapi повертає { data: [...] } або просто масив
+    const resp: any = await this.strapi.get(url);
+
     const zones = Array.isArray(resp?.data) ? resp.data : resp;
     if (!zones.length) return [];
 
