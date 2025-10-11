@@ -12,7 +12,7 @@ export class TimeZonesService {
     qs.set("populate", "countries");
     qs.set("pagination[pageSize]", "100");
 
-    const resp = await this.strapi.get(`/time-zones?${qs.toString()}`);
+    const resp: any = await this.strapi.get(`/time-zones?${qs.toString()}`);
     const data = Array.isArray(resp?.data) ? resp.data : resp;
 
     if (!Array.isArray(data)) return [];
