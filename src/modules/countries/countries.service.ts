@@ -11,7 +11,7 @@ export class CountriesService {
       const params = new URLSearchParams();
       params.set("locale", locale);
 
-      // --- Вкладений populate (кожен унікальний ключ) ---
+      // --- Вкладені populate ---
       params.set("populate[ambassadors][populate][0]", "Photo");
       params.set("populate[ambassadors][populate][1]", "Video");
       params.set("populate[ambassadors][populate][2]", "SocialLinks");
@@ -19,6 +19,7 @@ export class CountriesService {
       params.set("populate[time_zones]", "true");
       params.set("populate[TimezoneDetail]", "true");
       params.set("populate[Background]", "true");
+      params.set("populate[Gallery][populate][Photos]", "true");
 
       // --- Фільтри ---
       if (code) params.set("filters[CountryCode][$eq]", code.toUpperCase());
@@ -34,10 +35,19 @@ export class CountriesService {
       return data.map((item: any) => {
         const attrs = item.attributes ?? item;
 
+        // --- Background ---
         const bg =
           attrs.Background?.data?.attributes ?? attrs.Background ?? null;
         const backgroundUrl = bg?.url ?? null;
 
+        // --- Gallery (лише урли) ---
+        const galleryUrls =
+          attrs.Gallery?.Photos?.map((photo: any) => {
+            const p = photo?.attributes ?? photo;
+            return p.url ?? null;
+          }).filter(Boolean) ?? [];
+
+        // --- Ambassadors ---
         const ambassadors = Array.isArray(attrs.ambassadors)
           ? attrs.ambassadors.map((a: any) => {
               const amb = a.attributes ?? a;
@@ -79,6 +89,7 @@ export class CountriesService {
           slug: attrs.slug ?? "",
           locale: attrs.locale ?? locale,
           Background: backgroundUrl,
+          Gallery: galleryUrls,
           time_zones: attrs.time_zones ?? [],
           TimezoneDetail: attrs.TimezoneDetail ?? [],
           ambassadors,
