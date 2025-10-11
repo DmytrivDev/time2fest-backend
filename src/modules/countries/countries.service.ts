@@ -11,11 +11,11 @@ export class CountriesService {
       const params = new URLSearchParams();
       params.set("locale", locale);
 
-      // --- ❗ Важливо: додаємо вкладений populate як окремі поля ---
+      // --- Вкладений populate (кожен унікальний ключ) ---
       params.set("populate[ambassadors][populate][0]", "Photo");
       params.set("populate[ambassadors][populate][1]", "Video");
       params.set("populate[ambassadors][populate][2]", "SocialLinks");
-      params.set("populate[ambassadors][populate][2]", "time_zone");
+      params.set("populate[ambassadors][populate][3]", "time_zone");
       params.set("populate[time_zones]", "true");
       params.set("populate[TimezoneDetail]", "true");
       params.set("populate[Background]", "true");
@@ -34,12 +34,10 @@ export class CountriesService {
       return data.map((item: any) => {
         const attrs = item.attributes ?? item;
 
-        // 🖼️ Фонове зображення
         const bg =
           attrs.Background?.data?.attributes ?? attrs.Background ?? null;
         const backgroundUrl = bg?.url ?? null;
 
-        // 🕺 Амбасадори з вкладеними медіа
         const ambassadors = Array.isArray(attrs.ambassadors)
           ? attrs.ambassadors.map((a: any) => {
               const amb = a.attributes ?? a;
@@ -56,7 +54,9 @@ export class CountriesService {
                 video:
                   amb.Video?.data?.attributes?.url ?? amb.Video?.url ?? null,
                 time_zone:
-                  amb.time_zone?.data?.attributes?.code ?? amb.time_zone?.code ?? null,
+                  amb.time_zone?.data?.attributes?.code ??
+                  amb.time_zone?.code ??
+                  null,
                 socialLinks: Array.isArray(amb.SocialLinks)
                   ? amb.SocialLinks.map((link: any) => ({
                       name: link?.Name ?? "",
