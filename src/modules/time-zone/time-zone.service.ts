@@ -53,7 +53,7 @@ export class TimeZoneService {
           c.TimezoneDetail?.data ??
           c.TimezoneDetail ??
           [],
-      }; 
+      };
     });
   }
 }
