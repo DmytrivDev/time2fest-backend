@@ -52,10 +52,34 @@ export class TimeZonesService {
     const qs = new URLSearchParams();
     qs.set("filters[code][$eq]", code);
     qs.set("locale", locale);
-    qs.set("populate", "deep,3"); // 🔥 головна правка
+    qs.set("populate[countries][populate][0]", "TimezoneDetail");
 
     const resp: any = await this.strapi.get(`/time-zones?${qs.toString()}`);
-    return resp?.data ?? [];
+
+    if (!resp || !resp.data || !resp.data.length) {
+      return [];
+    }
+
+    // 🔍 Розпаковуємо країни навіть якщо вони всередині .data
+    const rawCountries =
+      resp.data[0]?.attributes?.countries?.data ??
+      resp.data[0]?.countries ??
+      [];
+
+    const countries = rawCountries.map((item: any) => {
+      const attrs = item.attributes ?? item;
+      return {
+        id: attrs.id ?? item.id,
+        CountryName: attrs.CountryName,
+        CountryCode: attrs.CountryCode,
+        CountryDesc: attrs.CountryDesc,
+        ShortDesc: attrs.ShortDesc,
+        slug: attrs.slug,
+        TimezoneDetail: attrs.TimezoneDetail ?? [],
+      };
+    });
+
+    return countries;
   }
 
   // Парсимо "UTC±X(:Y)" -> offset у хвилинах
