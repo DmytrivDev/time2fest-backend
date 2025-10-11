@@ -51,10 +51,8 @@ export class TimeZonesService {
   async getCountriesByTimeZones(code: string, locale = "uk") {
     const qs = new URLSearchParams();
     qs.set("filters[code][$eq]", code);
-
-    // 👇 ось тут головне: додаємо вкладену популяцію
-    qs.set("populate", "countries, countries.TimezoneDetail");
     qs.set("locale", locale);
+    qs.set("populate", "deep,3"); // 🔥 головна правка
 
     const resp: any = await this.strapi.get(`/time-zones?${qs.toString()}`);
     return resp?.data ?? [];
