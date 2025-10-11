@@ -48,25 +48,28 @@ export class TimeZonesService {
   }
 
   // 🔹 Країни для конкретної зони
+  // Країни для конкретної зони
   async getCountriesByTimeZones(code: string, locale = "uk") {
     const qs = new URLSearchParams();
     qs.set("filters[code][$eq]", code);
     qs.set("locale", locale);
-    // просимо Strapi підтягнути деталі таймзони всередині країн
+    // просимо Strapi підтягнути всі вкладені дані
     qs.set("populate[countries][populate][0]", "TimezoneDetail");
-    qs.set("populate[countries][populate][1]", "time_zones");
-    qs.set("populate[countries][populate][2]", "ambassadors");
+    qs.set("populate[countries][populate][1]", "ambassadors");
+    qs.set("populate[countries][populate][2]", "time_zones");
+    qs.set("populate[countries][populate][3]", "Background");
 
     const resp: any = await this.strapi.get(`/time-zones?${qs.toString()}`);
-    const data = Array.isArray(resp?.data) ? resp.data : resp;
 
-    if (!data.length) return [];
+    // ✅ Strapi зазвичай повертає { data: [...] }
+    const zones = Array.isArray(resp?.data) ? resp.data : resp;
+    if (!zones.length) return [];
 
-    // беремо першу зону, бо фільтр по code повертає одну
-    const zone = data[0];
+    // ✅ Беремо першу зону (бо фільтр по code)
+    const zone = zones[0];
     const attrs = zone.attributes ?? zone;
 
-    // розпаковуємо країни (з урахуванням варіацій Strapi)
+    // ✅ Розпаковуємо countries незалежно від структури
     const rawCountries =
       attrs.countries?.data ??
       attrs.countries ??
@@ -74,48 +77,34 @@ export class TimeZonesService {
       zone.countries ??
       [];
 
-    // формуємо масив чистих країн
-    const countries = rawCountries.map((item: any) => {
-      const attrs = item.attributes ?? item;
-
-      // TimezoneDetail може бути або всередині attributes, або в .data
-      const tzDetails =
-        attrs.TimezoneDetail?.data ??
-        attrs.TimezoneDetail ??
-        item.TimezoneDetail?.data ??
-        item.TimezoneDetail ??
-        [];
-
-      const timeZones =
-        attrs.time_zones?.data ??
-        attrs.time_zones ??
-        item.time_zones?.data ??
-        item.time_zones ??
-        [];
-
-      const ambassadors =
-        attrs.ambassadors?.data ??
-        attrs.ambassadors ??
-        item.ambassadors?.data ??
-        item.ambassadors ??
-        [];
+    // ✅ Формуємо чисту відповідь з усіма вкладеними полями
+    return rawCountries.map((c: any) => {
+      const a = c.attributes ?? c;
 
       return {
-        id: attrs.id ?? item.id,
-        CountryName: attrs.CountryName,
-        CountryCode: attrs.CountryCode,
-        CountryDesc: attrs.CountryDesc,
-        ShortDesc: attrs.ShortDesc,
-        slug: attrs.slug,
-        locale: attrs.locale ?? locale,
-        TimezoneDetail: tzDetails,
-        time_zones: timeZones,
-        ambassadors,
-        Background: attrs.Background ?? null,
+        id: a.id ?? c.id,
+        CountryName: a.CountryName,
+        CountryCode: a.CountryCode,
+        CountryDesc: a.CountryDesc,
+        ShortDesc: a.ShortDesc,
+        slug: a.slug,
+        locale: a.locale ?? locale,
+
+        // 🧠 Головне: TimezoneDetail
+        TimezoneDetail:
+          a.TimezoneDetail?.data ??
+          a.TimezoneDetail ??
+          c.TimezoneDetail?.data ??
+          c.TimezoneDetail ??
+          [],
+
+        ambassadors:
+          a.ambassadors?.data ?? a.ambassadors ?? c.ambassadors?.data ?? [],
+        time_zones:
+          a.time_zones?.data ?? a.time_zones ?? c.time_zones?.data ?? [],
+        Background: a.Background ?? null,
       };
     });
-
-    return countries;
   }
 
   // 🔹 Парсимо "UTC±X(:Y)" -> offset у хвилинах
