@@ -1,59 +1,63 @@
-// src/modules/time-zone/time-zone.service.ts
-import { Injectable } from "@nestjs/common";
+import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { StrapiService } from "../../services/strapi.service";
+import { AxiosError } from "axios";
 
 @Injectable()
 export class TimeZoneService {
   constructor(private readonly strapi: StrapiService) {}
 
   async getCountriesByTimeZone(code: string, locale = "uk") {
-    const filters = new URLSearchParams();
-    filters.set("filters[code][$eq]", code);
-    filters.set("locale", locale);
+    try {
+      // 👉 формуємо фільтри
+      const qs = new URLSearchParams();
+      qs.set("filters[code][$eq]", code);
+      qs.set("locale", locale);
 
-    // ❗ формуємо populate окремо
-    const populate = encodeURIComponent(
-      JSON.stringify({
-        countries: {
-          populate: [
-            "TimezoneDetail",
-            "ambassadors",
-            "time_zones",
-            "Background",
-          ],
-        },
-      })
-    );
+      // 👉 залишаємо тільки TimezoneDetail
+      qs.set("populate[countries][populate][0]", "TimezoneDetail");
 
-    const url = `/time-zones?${filters.toString()}&populate=${populate}`;
+      // 👉 фінальний URL
+      const url = `/time-zones?${qs.toString()}`;
+      console.log("🧭 Fetching from Strapi:", url);
 
-    const resp: any = await this.strapi.get(url);
+      // 👉 запит до Strapi
+      const resp: any = await this.strapi.get(url);
+      if (!resp) return [];
 
-    const zones = Array.isArray(resp?.data) ? resp.data : resp;
-    if (!zones.length) return [];
+      const zones = Array.isArray(resp.data) ? resp.data : resp;
+      if (!zones?.length) return [];
 
-    const zone = zones[0];
-    const attrs = zone.attributes ?? zone;
-    const countries =
-      attrs.countries?.data ?? attrs.countries ?? zone.countries?.data ?? [];
+      const zone = zones[0];
+      const attrs = zone.attributes ?? zone;
 
-    return countries.map((c: any) => {
-      const a = c.attributes ?? c;
-      return {
-        id: a.id ?? c.id,
-        CountryName: a.CountryName,
-        CountryCode: a.CountryCode,
-        CountryDesc: a.CountryDesc,
-        ShortDesc: a.ShortDesc,
-        slug: a.slug,
-        locale: a.locale ?? locale,
-        TimezoneDetail:
-          a.TimezoneDetail?.data ??
-          a.TimezoneDetail ??
-          c.TimezoneDetail?.data ??
-          c.TimezoneDetail ??
-          [],
-      };
-    });
+      const countries =
+        attrs.countries?.data ?? attrs.countries ?? zone.countries?.data ?? [];
+
+      return countries.map((c: any) => {
+        const a = c.attributes ?? c;
+        return {
+          id: a.id ?? c.id,
+          CountryName: a.CountryName,
+          CountryCode: a.CountryCode,
+          CountryDesc: a.CountryDesc,
+          ShortDesc: a.ShortDesc,
+          slug: a.slug,
+          locale: a.locale ?? locale,
+          TimezoneDetail:
+            a.TimezoneDetail?.data ??
+            a.TimezoneDetail ??
+            c.TimezoneDetail?.data ??
+            c.TimezoneDetail ??
+            [],
+        };
+      });
+    } catch (err) {
+      const error = err as AxiosError;
+      console.error(
+        "🔥 TimeZoneService error:",
+        error.response?.data || error.message
+      );
+      throw new InternalServerErrorException("Failed to load time zone data");
+    }
   }
 }

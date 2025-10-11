@@ -1,4 +1,3 @@
-// src/modules/time-zone/time-zone.controller.ts
 import { Controller, Get, Param, Query } from "@nestjs/common";
 import { TimeZoneService } from "./time-zone.service";
 
@@ -6,12 +5,13 @@ import { TimeZoneService } from "./time-zone.service";
 export class TimeZoneController {
   constructor(private readonly tzService: TimeZoneService) {}
 
-  // GET /time-zone/UTC+2/countries?locale=uk
+  // GET /time-zone/UTC+1/countries?locale=en
   @Get(":code/countries")
   async getCountries(
     @Param("code") code: string,
     @Query("locale") locale = "uk"
   ) {
+    console.log("🌍 Requested code:", code, "locale:", locale);
     return this.tzService.getCountriesByTimeZone(code, locale);
   }
 }
