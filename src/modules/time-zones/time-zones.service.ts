@@ -1,3 +1,4 @@
+// src/modules/time-zones/time-zones.service.ts
 import { Injectable } from "@nestjs/common";
 import { StrapiService } from "../../services/strapi.service";
 
@@ -5,19 +6,18 @@ import { StrapiService } from "../../services/strapi.service";
 export class TimeZonesService {
   constructor(private readonly strapi: StrapiService) {}
 
-  // 🔹 Усі таймзони з країнами
+  // Усі таймзони з країнами
   async getAllTimeZones(locale = "uk") {
     const qs = new URLSearchParams();
     qs.set("locale", locale);
     qs.set("populate", "countries");
     qs.set("pagination[pageSize]", "100");
 
-    const resp: any = await this.strapi.get(`/time-zones?${qs.toString()}`);
-    const data = Array.isArray(resp?.data) ? resp.data : resp;
+    const resp = await this.strapi.get(`/time-zones?${qs.toString()}`);
 
-    if (!Array.isArray(data)) return [];
+    if (!Array.isArray(resp)) return [];
 
-    const zones = data.map((tz: any) => {
+    const zones = resp.map((tz: any) => {
       const attrs = tz.attributes ?? tz;
       const countries = Array.isArray(attrs.countries?.data)
         ? attrs.countries.data
@@ -36,7 +36,7 @@ export class TimeZonesService {
       const offsetMinutes = this.parseOffset(code);
 
       return {
-        id: tz.id ?? attrs.id,
+        id: tz.id,
         code,
         offset,
         offsetMinutes,
@@ -47,59 +47,18 @@ export class TimeZonesService {
     return this.sortTimeZones(zones);
   }
 
-  // 🔹 Країни для конкретної зони
+  // Країни для конкретної зони
   async getCountriesByTimeZones(code: string, locale = "uk") {
     const qs = new URLSearchParams();
     qs.set("filters[code][$eq]", code);
+    qs.set("populate", "countries");
     qs.set("locale", locale);
 
-    // 🔹 Рекомендований варіант
-    qs.set("populate[0]", "countries.TimezoneDetail");
-    qs.set("populate[1]", "countries.ambassadors");
-    qs.set("populate[2]", "countries.time_zones");
-    qs.set("populate[3]", "countries.Background");
-
     const resp: any = await this.strapi.get(`/time-zones?${qs.toString()}`);
-    const zones = Array.isArray(resp?.data) ? resp.data : resp;
-    if (!zones.length) return [];
-
-    const zone = zones[0];
-    const attrs = zone.attributes ?? zone;
-
-    const rawCountries =
-      attrs.countries?.data ??
-      attrs.countries ??
-      zone.countries?.data ??
-      zone.countries ??
-      [];
-
-    return rawCountries.map((c: any) => {
-      const a = c.attributes ?? c;
-
-      return {
-        id: a.id ?? c.id,
-        CountryName: a.CountryName,
-        CountryCode: a.CountryCode,
-        CountryDesc: a.CountryDesc,
-        ShortDesc: a.ShortDesc,
-        slug: a.slug,
-        locale: a.locale ?? locale,
-        TimezoneDetail:
-          a.TimezoneDetail?.data ??
-          a.TimezoneDetail ??
-          c.TimezoneDetail?.data ??
-          c.TimezoneDetail ??
-          [],
-        ambassadors:
-          a.ambassadors?.data ?? a.ambassadors ?? c.ambassadors?.data ?? [],
-        time_zones:
-          a.time_zones?.data ?? a.time_zones ?? c.time_zones?.data ?? [],
-        Background: a.Background ?? null,
-      };
-    });
+    return resp?.data ?? [];
   }
 
-  // 🔹 Парсимо "UTC±X(:Y)" -> offset у хвилинах
+  // Парсимо "UTC±X(:Y)" -> offset у хвилинах
   private parseOffset(code: string): number {
     if (!code || !code.startsWith("UTC")) return 0;
     const match = code.match(/^UTC([+-])(\d{1,2})(?::(\d{2}))?$/);
@@ -112,11 +71,11 @@ export class TimeZonesService {
     return sign * (hours * 60 + minutes);
   }
 
-  // 🔹 Сортування таймзон
+  // Сортування: + (включно з 0) у зворотному порядку, мінуси — особливим чином
   private sortTimeZones(zones: any[]) {
     const positives = zones
       .filter((z) => z.offsetMinutes >= 0)
-      .sort((a, b) => b.offsetMinutes - a.offsetMinutes);
+      .sort((a, b) => b.offsetMinutes - a.offsetMinutes); // зворотній порядок
 
     const negatives = zones
       .filter((z) => z.offsetMinutes < 0)
@@ -124,15 +83,18 @@ export class TimeZonesService {
         const absA = Math.abs(a.offsetMinutes);
         const absB = Math.abs(b.offsetMinutes);
 
+        // спочатку цілі години (мінут = 0)
         const isHalfA = absA % 60 !== 0;
         const isHalfB = absB % 60 !== 0;
 
         if (Math.floor(absA / 60) === Math.floor(absB / 60)) {
+          // у межах однієї години: спершу ціла, потім дробова
           if (!isHalfA && isHalfB) return -1;
           if (isHalfA && !isHalfB) return 1;
           return absA - absB;
         }
 
+        // інакше — за зростанням годин
         return absA - absB;
       });
 
