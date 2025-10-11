@@ -48,28 +48,24 @@ export class TimeZonesService {
   }
 
   // 🔹 Країни для конкретної зони
-  // Країни для конкретної зони
   async getCountriesByTimeZones(code: string, locale = "uk") {
     const qs = new URLSearchParams();
     qs.set("filters[code][$eq]", code);
     qs.set("locale", locale);
-    // просимо Strapi підтягнути всі вкладені дані
-    qs.set("populate[countries][populate][0]", "TimezoneDetail");
-    qs.set("populate[countries][populate][1]", "ambassadors");
-    qs.set("populate[countries][populate][2]", "time_zones");
-    qs.set("populate[countries][populate][3]", "Background");
+
+    // 🔹 Рекомендований варіант
+    qs.set("populate[0]", "countries.TimezoneDetail");
+    qs.set("populate[1]", "countries.ambassadors");
+    qs.set("populate[2]", "countries.time_zones");
+    qs.set("populate[3]", "countries.Background");
 
     const resp: any = await this.strapi.get(`/time-zones?${qs.toString()}`);
-
-    // ✅ Strapi зазвичай повертає { data: [...] }
     const zones = Array.isArray(resp?.data) ? resp.data : resp;
     if (!zones.length) return [];
 
-    // ✅ Беремо першу зону (бо фільтр по code)
     const zone = zones[0];
     const attrs = zone.attributes ?? zone;
 
-    // ✅ Розпаковуємо countries незалежно від структури
     const rawCountries =
       attrs.countries?.data ??
       attrs.countries ??
@@ -77,7 +73,6 @@ export class TimeZonesService {
       zone.countries ??
       [];
 
-    // ✅ Формуємо чисту відповідь з усіма вкладеними полями
     return rawCountries.map((c: any) => {
       const a = c.attributes ?? c;
 
@@ -89,15 +84,12 @@ export class TimeZonesService {
         ShortDesc: a.ShortDesc,
         slug: a.slug,
         locale: a.locale ?? locale,
-
-        // 🧠 Головне: TimezoneDetail
         TimezoneDetail:
           a.TimezoneDetail?.data ??
           a.TimezoneDetail ??
           c.TimezoneDetail?.data ??
           c.TimezoneDetail ??
           [],
-
         ambassadors:
           a.ambassadors?.data ?? a.ambassadors ?? c.ambassadors?.data ?? [],
         time_zones:
