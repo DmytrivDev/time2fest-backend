@@ -10,36 +10,41 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: 🧾 Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup SSH
+      - name: 🔑 Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.DEPLOY_ACCESS }}
 
-      - name: Add server to known_hosts
+      - name: 🧩 Add server to known_hosts
         run: |
           ssh-keyscan -H 178.20.157.85 >> ~/.ssh/known_hosts
 
-      - name: Debug repo structure
+      - name: 🗂️ Debug repo structure
         run: |
           pwd
           ls -la
           ls -la time2fest || true
           ls -la time2fest/backend || true
 
-      - name: Sync backend code to server
+      - name: 📦 Sync backend code to server
         run: |
           rsync -az \
             --exclude='.env' \
             --exclude='node_modules' \
             ./ deploy@178.20.157.85:/home/deploy/time2fest/backend/
 
-      - name: Rebuild backend container
+      - name: 🚀 Rebuild backend container
         run: |
           ssh deploy@178.20.157.85 "
             cd /home/deploy/time2fest &&
-            docker compose build backend &&
-            docker compose up -d backend
+            echo '🧹 Cleaning up old Docker resources (excluding volumes)...' &&
+            docker system prune -af || true &&
+            echo '🚧 Building backend container...' &&
+            docker compose build --no-cache backend &&
+            echo '🚀 Starting backend container...' &&
+            docker compose up -d backend &&
+            echo '✅ Backend deployed successfully!'
           "
