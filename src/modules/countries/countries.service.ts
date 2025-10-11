@@ -15,6 +15,7 @@ export class CountriesService {
       params.set("populate[ambassadors][populate][0]", "Photo");
       params.set("populate[ambassadors][populate][1]", "Video");
       params.set("populate[ambassadors][populate][2]", "SocialLinks");
+      params.set("populate[ambassadors][populate][2]", "time_zone");
       params.set("populate[time_zones]", "true");
       params.set("populate[TimezoneDetail]", "true");
       params.set("populate[Background]", "true");
@@ -54,6 +55,8 @@ export class CountriesService {
                   amb.Photo?.data?.attributes?.url ?? amb.Photo?.url ?? null,
                 video:
                   amb.Video?.data?.attributes?.url ?? amb.Video?.url ?? null,
+                time_zone:
+                  amb.time_zone?.data?.attributes?.code ?? amb.time_zone?.code ?? null,
                 socialLinks: Array.isArray(amb.SocialLinks)
                   ? amb.SocialLinks.map((link: any) => ({
                       name: link?.Name ?? "",
