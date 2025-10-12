@@ -69,7 +69,7 @@ export class AmbassadorsListService {
         base.socialLinks = Array.isArray(attrs.SocialLinks)
           ? attrs.SocialLinks.map((link: any) => ({
               name: link?.Name ?? "",
-              link: link?.Link ?? "",
+              link: link?.Link ?? "", 
             }))
           : [];
         base.fullDescription = attrs.FullDescription ?? "";
