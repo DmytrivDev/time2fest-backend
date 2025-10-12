@@ -18,6 +18,7 @@ import { AmbassPageRestModule } from "./modules/ambass-page-rest/ambass-page-res
 import { AmbassadorsModule } from "./modules/ambassadors/ambassadors.module";
 import { TextModule } from "./modules/text/text.module";
 import { AmbassadorsListModule } from "./modules/ambassadors-list/ambassadors-list.module";
+import { ContactsModule } from "./modules/contacts/contacts.module";
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { AmbassadorsListModule } from "./modules/ambassadors-list/ambassadors-li
     AmbassadorsModule,
     TextModule,
     AmbassadorsListModule,
+    ContactsModule,
   ],
 })
 export class AppModule {}
