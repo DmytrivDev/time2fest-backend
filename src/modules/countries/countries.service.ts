@@ -85,7 +85,7 @@ export class CountriesService {
           CountryName: attrs.CountryName ?? "",
           CountryCode: attrs.CountryCode ?? "",
           CountryDesc: attrs.CountryDesc ?? "",
-          countrySec: attrs.countrySec ?? "",
+          CountrySec: attrs.CountrySec ?? "",
           ShortDesc: attrs.ShortDesc ?? "",
           slug: attrs.slug ?? "",
           locale: attrs.locale ?? locale,

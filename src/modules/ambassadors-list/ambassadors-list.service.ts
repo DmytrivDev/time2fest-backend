@@ -51,7 +51,7 @@ export class AmbassadorsListService {
         description: attrs.Description ?? "",
         country: {
           name: country?.CountryName ?? "",
-          sec: country?.countrySec ?? "",
+          sec: country?.CountrySec ?? "",
           code: country?.CountryCode ?? "",
         },
         timeZone: tz?.code ?? "",
@@ -119,7 +119,7 @@ export class AmbassadorsListService {
       fullDescription: attrs.FullDescription ?? "",
       country: {
         name: country?.CountryName ?? "",
-        sec: country?.countrySec ?? "",
+        sec: country?.CountrySec ?? "",
         code: country?.CountryCode ?? "",
       },
       timeZone: tz?.code ?? "",
