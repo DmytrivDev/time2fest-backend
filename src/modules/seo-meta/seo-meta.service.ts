@@ -9,9 +9,10 @@ export class SeoMetaService {
   async getSeoMeta(page: string, locale: string) {
     let collection = "";
 
-
     if (page === "home") {
       collection = `${page}-seo-meta`; // home-seo-meta, about-seo-meta
+    } else if (page === "AmbassadorsList") {
+      collection = `ambassadors-list-seo-meta`;
     } else {
       collection = `${page}-page`;
     }
