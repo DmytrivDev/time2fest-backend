@@ -12,7 +12,7 @@ export class SeoMetaService {
     if (page === "home") {
       collection = `${page}-seo-meta`; // home-seo-meta, about-seo-meta
     } else if (page === "AmbassadorsList") {
-      collection = `ambassadors-list-seo-meta`;
+      collection = `ambassadors-list-page`;
     } else {
       collection = `${page}-page`;
     }
