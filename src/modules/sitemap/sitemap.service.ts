@@ -63,21 +63,6 @@ export class SitemapService {
     //   });
     // });
 
-    // // 📌 3. Динамічні сторінки з Strapi — часові пояси
-    // const timezones: any = await this.strapi.get(
-    //   `/timezones?locale=all&pagination[limit]=100`
-    // );
-    // timezones?.data?.forEach((zone: any) => {
-    //   const loc =
-    //     zone.locale === "uk"
-    //       ? `https://time2fest.com/timezone/${zone.slug}`
-    //       : `https://time2fest.com/${zone.locale}/timezone/${zone.slug}`;
-    //   urls.push({
-    //     loc,
-    //     changefreq: "weekly",
-    //     priority: 0.7,
-    //   });
-    // });
 
     return urls;
   }
