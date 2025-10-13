@@ -14,6 +14,7 @@ export class SitemapService {
       { path: "about", changefreq: "weekly", priority: 0.8 },
       { path: "ambassadors", changefreq: "weekly", priority: 0.9 },
       { path: "become-ambassador", changefreq: "monthly", priority: 0.6 },
+      { path: "contact", changefreq: "monthly", priority: 0.3 },
       { path: "privacy", changefreq: "monthly", priority: 0.3 },
       { path: "agreement", changefreq: "monthly", priority: 0.3 },
       { path: "disclaimer", changefreq: "monthly", priority: 0.3 },
