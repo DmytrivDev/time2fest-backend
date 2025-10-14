@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { StrapiService } from "../../services/strapi.service";
 
 @Injectable()
@@ -13,6 +13,7 @@ export class SitemapService {
       { path: "", changefreq: "daily", priority: 1.0 }, // головна
       { path: "about", changefreq: "weekly", priority: 0.8 },
       { path: "ambassadors", changefreq: "weekly", priority: 0.9 },
+      { path: "ambassadors/list", changefreq: "weekly", priority: 0.7 },
       { path: "become-ambassador", changefreq: "monthly", priority: 0.6 },
       { path: "contact", changefreq: "monthly", priority: 0.3 },
       { path: "privacy", changefreq: "monthly", priority: 0.3 },
@@ -21,23 +22,21 @@ export class SitemapService {
       { path: "terms", changefreq: "monthly", priority: 0.3 },
     ];
 
-    const locales = ["en", "uk", "es", "fr"]; // можна розширити
+    const locales = ["en", "uk", "es", "fr"];
+    const baseUrl = "https://time2fest.com";
 
+    // --- додаємо статичні ---
     staticPages.forEach((page) => {
       locales.forEach((lang) => {
         let loc =
           lang === "en"
-            ? `https://time2fest.com/${page.path}`
-            : `https://time2fest.com/${lang}/${page.path}`;
+            ? `${baseUrl}/${page.path}`
+            : `${baseUrl}/${lang}/${page.path}`;
 
-        // для головної сторінки залишаємо фінальний "/"
         if (!page.path) {
-          loc =
-            lang === "en"
-              ? "https://time2fest.com/"
-              : `https://time2fest.com/${lang}/`;
+          loc = lang === "en" ? `${baseUrl}/` : `${baseUrl}/${lang}/`;
         } else {
-          loc = loc.replace(/\/$/, ""); // прибираємо лишній слеш тільки для внутрішніх
+          loc = loc.replace(/\/$/, "");
         }
 
         urls.push({
@@ -48,22 +47,41 @@ export class SitemapService {
       });
     });
 
-    // 📌 2. Динамічні сторінки з Strapi — країни
-    // const countries: any = await this.strapi.get(
-    //   `/countries?locale=all&pagination[limit]=100`
-    // );
-    // countries?.data?.forEach((country: any) => {
-    //   const loc =
-    //     country.locale === "uk"
-    //       ? `https://time2fest.com/country/${country.slug}`
-    //       : `https://time2fest.com/${country.locale}/country/${country.slug}`;
-    //   urls.push({
-    //     loc,
-    //     changefreq: "weekly",
-    //     priority: 0.7,
-    //   });
-    // });
+    // 📌 2. Динамічні сторінки амбасадорів
+    try {
+      for (const locale of locales) {
+        const params = new URLSearchParams({
+          locale,
+          "pagination[pageSize]": "100",
+        });
 
+        const res: any = await this.strapi.get(`/ambassadors-list?${params}`);
+        const ambassadors = Array.isArray(res.data)
+          ? res.data
+          : res?.data?.data || [];
+
+        ambassadors.forEach((amb: any) => {
+          const slug = amb.slug || amb.attributes?.slug;
+          if (!slug) return;
+
+          const loc =
+            locale === "en"
+              ? `${baseUrl}/ambassadors/list/${slug}`
+              : `${baseUrl}/${locale}/ambassadors/list/${slug}`;
+
+          urls.push({
+            loc,
+            changefreq: "weekly",
+            priority: 0.7,
+          });
+        });
+      }
+    } catch (err) {
+      console.error("❌ Error fetching ambassadors:", err);
+      throw new InternalServerErrorException(
+        "Failed to fetch ambassadors from Strapi"
+      );
+    }
 
     return urls;
   }
