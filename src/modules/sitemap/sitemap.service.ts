@@ -13,7 +13,7 @@ export class SitemapService {
     const urls: { loc: string; changefreq: string; priority: number }[] = [];
     const baseUrl = "https://time2fest.com";
     const locales = ["en", "uk", "es", "fr"];
- 
+
     // 📌 1. Статичні сторінки
     const staticPages = [
       { path: "", changefreq: "daily", priority: 1.0 }, // головна
@@ -31,7 +31,7 @@ export class SitemapService {
       locales.forEach((lang) => {
         let loc =
           lang === "en"
-            ? `${baseUrl}/${page.path}` 
+            ? `${baseUrl}/${page.path}`
             : `${baseUrl}/${lang}/${page.path}`;
 
         if (!page.path) {
