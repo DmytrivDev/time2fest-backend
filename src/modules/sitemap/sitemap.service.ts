@@ -1,12 +1,18 @@
 import { Injectable } from "@nestjs/common";
 import { StrapiService } from "../../services/strapi.service";
+import { AmbassadorsListService } from "../ambassadors-list/ambassadors-list.service";
 
 @Injectable()
 export class SitemapService {
-  constructor(private readonly strapi: StrapiService) {}
+  constructor(
+    private readonly strapi: StrapiService,
+    private readonly ambassadorsList: AmbassadorsListService
+  ) {}
 
   async getUrls() {
     const urls: { loc: string; changefreq: string; priority: number }[] = [];
+    const baseUrl = "https://time2fest.com";
+    const locales = ["en", "uk", "es", "fr"];
 
     // 📌 1. Статичні сторінки
     const staticPages = [
@@ -21,10 +27,6 @@ export class SitemapService {
       { path: "terms", changefreq: "monthly", priority: 0.3 },
     ];
 
-    const locales = ["en", "uk", "es", "fr"];
-    const baseUrl = "https://time2fest.com";
-
-    // --- додаємо статичні ---
     staticPages.forEach((page) => {
       locales.forEach((lang) => {
         let loc =
@@ -46,16 +48,15 @@ export class SitemapService {
       });
     });
 
-    // 📌 2. Динамічні сторінки з Strapi — амбасадори
+    // 📌 2. Динамічні сторінки амбасадорів
     try {
-      const res: any = await this.strapi.get(
-        `/ambassadors-list?locale=all&pagination[limit]=100`
-      );
+      // один запит на всі локалі, як у твоєму сервісі
+      const ambassadors: any[] = await this.ambassadorsList.getAll("all");
 
-      res?.data?.forEach((ambassador: any) => {
-        const slug = ambassador.slug || ambassador.attributes?.slug;
-        const locale =
-          ambassador.locale || ambassador.attributes?.locale || "en";
+      ambassadors.forEach((amb) => {
+        const slug = amb.slug;
+        const locale = amb.locale || "en";
+        if (!slug) return;
 
         const loc =
           locale === "en"
@@ -69,7 +70,7 @@ export class SitemapService {
         });
       });
     } catch (err) {
-      console.error("❌ Error fetching ambassadors from Strapi:", err);
+      console.error("❌ Error fetching ambassadors for sitemap:", err);
     }
 
     return urls;

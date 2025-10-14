@@ -1,76 +1,141 @@
 import { Injectable } from "@nestjs/common";
 import { StrapiService } from "../../services/strapi.service";
-import { AmbassadorsListService } from "../ambassadors-list/ambassadors-list.service";
 
 @Injectable()
-export class SitemapService {
-  constructor(
-    private readonly strapi: StrapiService,
-    private readonly ambassadorsList: AmbassadorsListService
-  ) {}
+export class AmbassadorsListService {
+  constructor(private readonly strapi: StrapiService) {}
 
-  async getUrls() {
-    const urls: { loc: string; changefreq: string; priority: number }[] = [];
-    const baseUrl = "https://time2fest.com";
-    const locales = ["en", "uk", "es", "fr"];
+  async getAll(
+    locale = "uk",
+    timeZone?: string,
+    countryCode?: string,
+    ids?: number[],
+    full = false,
+    rand = false,
+    count = 1,
+    exclude: number[] = []
+  ) {
+    const qs = new URLSearchParams();
+    qs.set("locale", locale);
+    qs.set("pagination[pageSize]", "300");
+    qs.set("populate", "*");
 
-    // 📌 1. Статичні сторінки
-    const staticPages = [
-      { path: "", changefreq: "daily", priority: 1.0 }, // головна
-      { path: "about", changefreq: "weekly", priority: 0.8 },
-      { path: "ambassadors", changefreq: "weekly", priority: 0.9 },
-      { path: "become-ambassador", changefreq: "monthly", priority: 0.6 },
-      { path: "contact", changefreq: "monthly", priority: 0.3 },
-      { path: "privacy", changefreq: "monthly", priority: 0.3 },
-      { path: "agreement", changefreq: "monthly", priority: 0.3 },
-      { path: "disclaimer", changefreq: "monthly", priority: 0.3 },
-      { path: "terms", changefreq: "monthly", priority: 0.3 },
-    ];
+    // ---- Фільтри ----
+    if (timeZone) qs.set("filters[time_zone][code][$eq]", timeZone);
+    if (countryCode)
+      qs.set("filters[country][CountryCode][$eq]", countryCode.toUpperCase());
+    if (ids && ids.length > 0)
+      ids.forEach((id, i) => qs.set(`filters[id][$in][${i}]`, String(id)));
+    if (exclude && exclude.length > 0)
+      exclude.forEach((id, i) => qs.set(`filters[id][$notIn][${i}]`, String(id)));
 
-    staticPages.forEach((page) => {
-      locales.forEach((lang) => {
-        let loc =
-          lang === "en"
-            ? `${baseUrl}/${page.path}`
-            : `${baseUrl}/${lang}/${page.path}`;
+    // ---- Запит до Strapi ----
+    const resp: any = await this.strapi.get(
+      `/ambassadors-lists?${qs.toString()}`
+    );
+    const data = resp?.data ?? resp;
+    if (!Array.isArray(data)) return [];
 
-        if (!page.path) {
-          loc = lang === "en" ? `${baseUrl}/` : `${baseUrl}/${lang}/`;
-        } else {
-          loc = loc.replace(/\/$/, "");
-        }
+    // ---- Формування масиву ----
+    let result = data.map((item: any) => {
+      const attrs = item.attributes ?? item;
+      const photo =
+        attrs.Photo?.data?.attributes?.url ?? attrs.Photo?.url ?? null;
+      const country = attrs.country?.data?.attributes ?? attrs.country ?? null;
+      const tz = attrs.time_zone?.data?.attributes ?? attrs.time_zone ?? null;
 
-        urls.push({
-          loc,
-          changefreq: page.changefreq,
-          priority: page.priority,
-        });
-      });
+      const base: any = {
+        id: item.id,
+        slug: item.slug,
+        name: attrs.Name ?? "",
+        description: attrs.Description ?? "",
+        country: {
+          name: country?.CountryName ?? "",
+          sec: country?.CountrySec ?? "",
+          code: country?.CountryCode ?? "",
+        },
+        timeZone: tz?.code ?? "",
+        photo,
+        createdAt: attrs.createdAt,
+        updatedAt: attrs.updatedAt,
+        locale: attrs.locale,
+      };
+
+      if (full) {
+        base.video =
+          attrs.Video?.data?.attributes?.url ?? attrs.Video?.url ?? null;
+        base.languages = attrs.Languages ?? "";
+        base.gender = attrs.Gender ?? "";
+        base.socialLinks = Array.isArray(attrs.SocialLinks)
+          ? attrs.SocialLinks.map((link: any) => ({
+              name: link?.Name ?? "",
+              link: link?.Link ?? "", 
+            }))
+          : [];
+        base.fullDescription = attrs.FullDescription ?? "";
+      }
+
+      return base;
     });
 
-    try {
-      const ambassadors: any[] = await this.ambassadorsList.getAll("all");
-
-      ambassadors.forEach((amb) => {
-        const slug = amb.slug;
-        const locale = amb.locale || "en";
-        if (!slug) return;
-
-        const loc =
-          locale === "en"
-            ? `${baseUrl}/ambassadors/list/${slug}`
-            : `${baseUrl}/${locale}/ambassadors/list/${slug}`;
-
-        urls.push({
-          loc,
-          changefreq: "weekly",
-          priority: 0.7,
-        });
-      });
-    } catch (err) {
-      console.error("❌ Error fetching ambassadors for sitemap:", err);
+    // ---- Виключення ID (якщо Strapi не обробив) ----
+    if (exclude.length > 0) {
+      result = result.filter((item) => !exclude.includes(item.id));
     }
 
-    return urls;
+    // ---- Рандомізація ----
+    if (rand && result.length > 0) {
+      const shuffled = [...result].sort(() => Math.random() - 0.5);
+      result = shuffled.slice(0, Math.min(count, result.length));
+    }
+
+    return result;
+  }
+
+  // ---- Один амбасадор ----
+  async getById(id: number, locale = "uk") {
+    const qs = new URLSearchParams();
+    qs.set("locale", locale);
+    qs.set("populate", "*");
+
+    const resp: any = await this.strapi.get(
+      `/ambassadors-lists/${id}?${qs.toString()}`
+    );
+    const data = resp?.data ?? resp;
+    if (!data) return null;
+
+    const attrs = data.attributes ?? data;
+
+    const photo =
+      attrs.Photo?.data?.attributes?.url ?? attrs.Photo?.url ?? null;
+    const country = attrs.country?.data?.attributes ?? attrs.country ?? null;
+    const tz = attrs.time_zone?.data?.attributes ?? attrs.time_zone ?? null;
+
+    return {
+      id: data.id,
+      slug: data.slug,
+      name: attrs.Name ?? "",
+      description: attrs.Description ?? "",
+      fullDescription: attrs.FullDescription ?? "",
+      country: {
+        name: country?.CountryName ?? "",
+        sec: country?.CountrySec ?? "",
+        code: country?.CountryCode ?? "",
+      },
+      timeZone: tz?.code ?? "",
+      photo,
+      video: attrs.Video?.data?.attributes?.url ?? attrs.Video?.url ?? null,
+      languages: attrs.Languages ?? "",
+      gender: attrs.Gender ?? "",
+      socialLinks: Array.isArray(attrs.SocialLinks)
+        ? attrs.SocialLinks.map((link: any) => ({
+            name: link?.Name ?? "",
+            link: link?.Link ?? "",
+          }))
+        : [],
+      createdAt: attrs.createdAt,
+      updatedAt: attrs.updatedAt,
+      locale: attrs.locale,
+    };
   }
 }
