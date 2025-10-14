@@ -31,7 +31,7 @@ export class SitemapService {
       locales.forEach((lang) => {
         let loc =
           lang === "en"
-            ? `${baseUrl}/${page.path}`
+            ? `${baseUrl}/${page.path}` 
             : `${baseUrl}/${lang}/${page.path}`;
 
         if (!page.path) {
