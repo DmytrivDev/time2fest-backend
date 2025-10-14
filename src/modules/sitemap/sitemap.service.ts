@@ -55,7 +55,7 @@ export class SitemapService {
           "pagination[pageSize]": "100",
         });
 
-        const res: any = await this.strapi.get(`/ambassadors-list?${params}`);
+        const res: any = await this.strapi.get(`/ambassadors-lists?${params}`);
         const ambassadors = Array.isArray(res.data)
           ? res.data
           : res?.data?.data || [];
