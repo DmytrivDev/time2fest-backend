@@ -49,7 +49,7 @@ export class SitemapService {
     // 📌 2. Динамічні сторінки з Strapi — амбасадори
     try {
       const res: any = await this.strapi.get(
-        `/ambassadors-lists?locale=all&pagination[limit]=100`
+        `/ambassadors-list?locale=all&pagination[limit]=100`
       );
 
       res?.data?.forEach((ambassador: any) => {
