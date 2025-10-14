@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { StrapiService } from "../../services/strapi.service";
 
 @Injectable()
@@ -13,7 +13,6 @@ export class SitemapService {
       { path: "", changefreq: "daily", priority: 1.0 }, // головна
       { path: "about", changefreq: "weekly", priority: 0.8 },
       { path: "ambassadors", changefreq: "weekly", priority: 0.9 },
-      { path: "ambassadors/list", changefreq: "weekly", priority: 0.7 },
       { path: "become-ambassador", changefreq: "monthly", priority: 0.6 },
       { path: "contact", changefreq: "monthly", priority: 0.3 },
       { path: "privacy", changefreq: "monthly", priority: 0.3 },
@@ -47,40 +46,30 @@ export class SitemapService {
       });
     });
 
-    // 📌 2. Динамічні сторінки амбасадорів
+    // 📌 2. Динамічні сторінки з Strapi — амбасадори
     try {
-      for (const locale of locales) {
-        const params = new URLSearchParams({
-          locale,
-          "pagination[pageSize]": "100",
-        });
-
-        const res: any = await this.strapi.get(`/ambassadors-lists?${params}`);
-        const ambassadors = Array.isArray(res.data)
-          ? res.data
-          : res?.data?.data || [];
-
-        ambassadors.forEach((amb: any) => {
-          const slug = amb.slug || amb.attributes?.slug;
-          if (!slug) return;
-
-          const loc =
-            locale === "en"
-              ? `${baseUrl}/ambassadors/list/${slug}`
-              : `${baseUrl}/${locale}/ambassadors/list/${slug}`;
-
-          urls.push({
-            loc,
-            changefreq: "weekly",
-            priority: 0.7,
-          });
-        });
-      }
-    } catch (err) {
-      console.error("❌ Error fetching ambassadors:", err);
-      throw new InternalServerErrorException(
-        "Failed to fetch ambassadors from Strapi"
+      const res: any = await this.strapi.get(
+        `/ambassadors-lists?locale=all&pagination[limit]=100`
       );
+
+      res?.data?.forEach((ambassador: any) => {
+        const slug = ambassador.slug || ambassador.attributes?.slug;
+        const locale =
+          ambassador.locale || ambassador.attributes?.locale || "en";
+
+        const loc =
+          locale === "en"
+            ? `${baseUrl}/ambassadors/list/${slug}`
+            : `${baseUrl}/${locale}/ambassadors/list/${slug}`;
+
+        urls.push({
+          loc,
+          changefreq: "weekly",
+          priority: 0.7,
+        });
+      });
+    } catch (err) {
+      console.error("❌ Error fetching ambassadors from Strapi:", err);
     }
 
     return urls;
