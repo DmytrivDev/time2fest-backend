@@ -11,10 +11,5 @@ export const databaseCoreConfig: TypeOrmModuleOptions = {
   database: env.db.database_core,
   synchronize: true, // тільки для розробки!
   autoLoadEntities: true,
-  ssl: true,
-  extra: {
-    ssl: {
-      rejectUnauthorized: false,
-    },
-  },
+  ssl: false,
 };

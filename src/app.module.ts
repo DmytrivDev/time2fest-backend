@@ -19,10 +19,12 @@ import { AmbassadorsModule } from "./modules/ambassadors/ambassadors.module";
 import { TextModule } from "./modules/text/text.module";
 import { AmbassadorsListModule } from "./modules/ambassadors-list/ambassadors-list.module";
 import { ContactsModule } from "./modules/contacts/contacts.module";
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot(databaseCoreConfig),
+    AuthModule,
     StrapiModule,
     SeoMetaModule,
     SitemapModule,
