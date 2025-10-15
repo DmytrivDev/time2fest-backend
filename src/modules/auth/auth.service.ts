@@ -68,6 +68,17 @@ export class AuthService {
     return { id: user.id, email: user.email, name: user.name, token };
   }
 
+  async validateToken(token: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync(token, {
+        secret: process.env.JWT_SECRET || "superSecretKey123",
+      });
+      return this.validateUser(payload.id);
+    } catch (err) {
+      throw new UnauthorizedException("Invalid or expired token");
+    }
+  }
+
   async validateUser(id: number) {
     return this.userRepo.findOne({ where: { id } });
   }
