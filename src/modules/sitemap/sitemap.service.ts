@@ -19,6 +19,7 @@ export class SitemapService {
       { path: "", changefreq: "daily", priority: 1.0 }, // головна
       { path: "about", changefreq: "weekly", priority: 0.8 },
       { path: "ambassadors", changefreq: "weekly", priority: 0.9 },
+      { path: "ambassadors/list", changefreq: "weekly", priority: 0.8 },
       { path: "become-ambassador", changefreq: "monthly", priority: 0.6 },
       { path: "contact", changefreq: "monthly", priority: 0.3 },
       { path: "privacy", changefreq: "monthly", priority: 0.3 },
@@ -50,25 +51,25 @@ export class SitemapService {
 
     // 📌 2. Динамічні сторінки амбасадорів
     try {
-      // один запит на всі локалі, як у твоєму сервісі
-      const ambassadors: any[] = await this.ambassadorsList.getAll("all");
+      for (const locale of locales) {
+        const ambassadors = await this.ambassadorsList.getAll(locale);
 
-      ambassadors.forEach((amb) => {
-        const slug = amb.slug;
-        const locale = amb.locale || "en";
-        if (!slug) return;
+        ambassadors.forEach((amb) => {
+          const slug = amb.slug;
+          if (!slug) return;
 
-        const loc =
-          locale === "en"
-            ? `${baseUrl}/ambassadors/list/${slug}`
-            : `${baseUrl}/${locale}/ambassadors/list/${slug}`;
+          const loc =
+            locale === "en"
+              ? `${baseUrl}/ambassadors/list/${slug}`
+              : `${baseUrl}/${locale}/ambassadors/list/${slug}`;
 
-        urls.push({
-          loc,
-          changefreq: "weekly",
-          priority: 0.7,
+          urls.push({
+            loc,
+            changefreq: "weekly",
+            priority: 0.7,
+          });
         });
-      });
+      }
     } catch (err) {
       console.error("❌ Error fetching ambassadors for sitemap:", err);
     }
