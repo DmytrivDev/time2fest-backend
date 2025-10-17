@@ -9,6 +9,7 @@ import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
 import { User } from "./user.entity";
 import { RegisterDto, LoginDto } from "./dto";
+import * as jwt from "jsonwebtoken";
 
 @Injectable()
 export class AuthService {
@@ -77,6 +78,23 @@ export class AuthService {
     } catch (err) {
       throw new UnauthorizedException("Invalid or expired token");
     }
+  }
+
+  async generateTokens(user: User) {
+    const accessToken = this.jwtService.sign(
+      { id: user.id, email: user.email },
+      { expiresIn: "15m" }
+    );
+
+    const refreshToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET!, {
+      expiresIn: "30d",
+    });
+
+    // Хешуємо refreshToken перед збереженням
+    user.refreshToken = await bcrypt.hash(refreshToken, 10);
+    await this.userRepo.save(user);
+
+    return { accessToken, refreshToken };
   }
 
   async validateUser(id: number) {

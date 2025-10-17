@@ -4,9 +4,9 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-} from 'typeorm';
+} from "typeorm";
 
-@Entity('users')
+@Entity("users")
 export class User {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -19,6 +19,9 @@ export class User {
 
   @Column({ nullable: true })
   name?: string;
+
+  @Column({ nullable: true })
+  refreshToken?: string;
 
   @CreateDateColumn()
   createdAt!: Date;

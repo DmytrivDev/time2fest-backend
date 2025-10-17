@@ -27,5 +27,6 @@ import { AppleStrategy } from './apple.strategy';
     FacebookStrategy,
     AppleStrategy,
   ],
+  exports: [AuthService], // 👈 додай це
 })
 export class AuthModule {}
