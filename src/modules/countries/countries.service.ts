@@ -6,12 +6,18 @@ import { AxiosError } from "axios";
 export class CountriesService {
   constructor(private readonly strapi: StrapiService) {}
 
-  async getCountry(code?: string, slug?: string, locale = "uk") {
+  async getCountry(
+    code?: string,
+    slug?: string,
+    locale = "uk",
+    page?: string,
+    limit?: string
+  ) {
     try {
       const params = new URLSearchParams();
       params.set("locale", locale);
 
-      // --- Вкладені populate ---
+      // --- Populate ---
       params.set("populate[ambassadors][populate][0]", "Photo");
       params.set("populate[ambassadors][populate][1]", "Video");
       params.set("populate[ambassadors][populate][2]", "SocialLinks");
@@ -21,12 +27,23 @@ export class CountriesService {
       params.set("populate[Background]", "true");
       params.set("populate[Gallery][populate][Photos]", "true");
 
-      // --- Фільтри ---
+      // --- Пошук за конкретною країною ---
       if (code) params.set("filters[CountryCode][$eq]", code.toUpperCase());
       if (slug) params.set("filters[slug][$eq]", slug.toLowerCase());
 
+      // --- Якщо code/slug не вказані → беремо всі країни ---
+      if (!code && !slug) {
+        if (page && limit) {
+          params.set("pagination[page]", page);
+          params.set("pagination[pageSize]", limit);
+        } else {
+          // Без пагінації → отримуємо все (наприклад, 300 записів максимум)
+          params.set("pagination[pageSize]", "300");
+        }
+      }
+
       const url = `/countries?${params.toString()}`;
-      console.log("🌍 Fetching country from Strapi:", url);
+      console.log("🌍 Fetching country/countries from Strapi:", url);
 
       const resp: any = await this.strapi.get(url);
       const data = resp?.data ?? resp;
@@ -36,11 +53,10 @@ export class CountriesService {
         const attrs = item.attributes ?? item;
 
         // --- Background ---
-        const bg =
-          attrs.Background?.data?.attributes ?? attrs.Background ?? null;
+        const bg = attrs.Background?.data?.attributes ?? attrs.Background ?? null;
         const backgroundUrl = bg?.url ?? null;
 
-        // --- Gallery (лише урли) ---
+        // --- Gallery ---
         const galleryUrls =
           attrs.Gallery?.Photos?.map((photo: any) => {
             const p = photo?.attributes ?? photo;
@@ -100,10 +116,7 @@ export class CountriesService {
       });
     } catch (err) {
       const error = err as AxiosError;
-      console.error(
-        "🔥 CountriesService error:",
-        error.response?.data || error.message
-      );
+      console.error("🔥 CountriesService error:", error.response?.data || error.message);
       throw new InternalServerErrorException("Failed to load country data");
     }
   }
