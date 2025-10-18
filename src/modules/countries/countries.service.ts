@@ -15,7 +15,7 @@ export class CountriesService {
     tz?: string
   ) {
     try {
-      const params = new URLSearchParams();
+      const params = new URLSearchParams(); 
       params.set("locale", locale);
 
       // --- Вкладені дані ---
