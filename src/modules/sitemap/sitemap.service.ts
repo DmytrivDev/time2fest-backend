@@ -52,23 +52,26 @@ export class SitemapService {
     // 📌 2. Динамічні сторінки амбасадорів
     try {
       for (const locale of locales) {
-        const ambassadors = await this.ambassadorsList.getAll(locale);
+        const ambassadorsResp = await this.ambassadorsList.getAll(locale);
+        const ambassadors = ambassadorsResp?.items ?? [];
 
-        ambassadors.forEach((amb) => {
-          const slug = amb.slug;
-          if (!slug) return;
+        if (Array.isArray(ambassadors) && ambassadors.length > 0) {
+          ambassadors.forEach((amb: any) => {
+            const slug = amb.slug;
+            if (!slug) return;
 
-          const loc =
-            locale === "en"
-              ? `${baseUrl}/ambassadors/list/${slug}`
-              : `${baseUrl}/${locale}/ambassadors/list/${slug}`;
+            const loc =
+              locale === "en"
+                ? `${baseUrl}/ambassadors/list/${slug}`
+                : `${baseUrl}/${locale}/ambassadors/list/${slug}`;
 
-          urls.push({
-            loc,
-            changefreq: "weekly",
-            priority: 0.7,
+            urls.push({
+              loc,
+              changefreq: "weekly",
+              priority: 0.7,
+            });
           });
-        });
+        }
       }
     } catch (err) {
       console.error("❌ Error fetching ambassadors for sitemap:", err);

@@ -5,7 +5,7 @@ import { AmbassadorsListService } from "./ambassadors-list.service";
 export class AmbassadorsListController {
   constructor(private readonly ambListService: AmbassadorsListService) {}
 
-  // ---- Усі амбасадори (з фільтрацією + random + exclude) ----
+  // ---- Усі амбасадори з пагінацією, фільтрацією та опціями ----
   @Get()
   async getAll(
     @Query("locale") locale = "uk",
@@ -15,7 +15,9 @@ export class AmbassadorsListController {
     @Query("full") full?: string,
     @Query("rand") rand?: string,
     @Query("count") count?: string,
-    @Query("exclude") exclude?: string
+    @Query("exclude") exclude?: string,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string
   ) {
     const idArray = ids
       ? ids
@@ -43,7 +45,9 @@ export class AmbassadorsListController {
       isFull,
       isRandom,
       randCount,
-      excludeArray
+      excludeArray,
+      page,
+      limit
     );
   }
 
