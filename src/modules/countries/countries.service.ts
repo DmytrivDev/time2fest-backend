@@ -44,18 +44,21 @@ export class CountriesService {
       const url = `/countries?${params.toString()}`;
       console.log("🌍 Fetching countries:", url);
 
+      // 🔧 Ключова зміна — беремо resp.data та resp.meta
       const resp: any = await this.strapi.get(url);
-      const data = resp?.data ?? resp;
+
+      const itemsRaw = resp?.data ?? [];
       const meta = resp?.meta?.pagination ?? null;
 
-      if (!Array.isArray(data)) {
+      // Якщо це не масив — повертаємо порожньо
+      if (!Array.isArray(itemsRaw)) {
         return { items: [], meta };
       }
 
-      return {
-        items: data.map((item: any) => this.mapCountry(item, locale)),
-        meta, // ✅ додаємо мету
-      };
+      // Мапимо країни
+      const items = itemsRaw.map((item: any) => this.mapCountry(item, locale));
+
+      return { items, meta };
     } catch (err) {
       const error = err as AxiosError;
       console.error(
