@@ -14,22 +14,7 @@ export class CountriesController {
     @Query("page") page?: string,
     @Query("limit") limit?: string
   ) {
-    // Якщо передано tz — пошук по часовій зоні
-    if (tz) {
-      return this.countriesService.getCountriesByTimeZone(
-        tz,
-        locale,
-        page,
-        limit
-      );
-    }
-
-    // Якщо передано code або slug — пошук однієї країни
-    if (code || slug) {
-      return this.countriesService.getCountry(code, slug, locale);
-    }
-
-    // Інакше — усі країни (з пагінацією)
-    return this.countriesService.getAllCountries(locale, page, limit);
+    // 👉 Усе робить один метод getCountry — він уже вміє працювати і з tz, і з пагінацією
+    return this.countriesService.getCountry(code, slug, locale, page, limit, tz);
   }
 }
