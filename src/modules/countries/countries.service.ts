@@ -6,14 +6,6 @@ import { AxiosError } from "axios";
 export class CountriesService {
   constructor(private readonly strapi: StrapiService) {}
 
-  /**
-   * Основний метод отримання країн
-   * Підтримує:
-   * - code / slug → конкретна країна
-   * - tz → фільтр за часовою зоною
-   * - page + limit → пагінація
-   * - без параметрів → усі країни
-   */
   async getCountry(
     code?: string,
     slug?: string,
@@ -46,19 +38,24 @@ export class CountriesService {
         params.set("pagination[page]", page);
         params.set("pagination[pageSize]", limit);
       } else if (!code && !slug) {
-        // якщо не конкретна країна → обмежуємо кількість
         params.set("pagination[pageSize]", "300");
       }
 
       const url = `/countries?${params.toString()}`;
-      console.log("🌍 Fetching countries from Strapi:", url);
+      console.log("🌍 Fetching countries:", url);
 
       const resp: any = await this.strapi.get(url);
       const data = resp?.data ?? resp;
+      const meta = resp?.meta?.pagination ?? null;
 
-      if (!Array.isArray(data) || !data.length) return [];
+      if (!Array.isArray(data)) {
+        return { items: [], meta };
+      }
 
-      return data.map((item: any) => this.mapCountry(item, locale));
+      return {
+        items: data.map((item: any) => this.mapCountry(item, locale)),
+        meta, // ✅ додаємо мету
+      };
     } catch (err) {
       const error = err as AxiosError;
       console.error(
@@ -69,24 +66,16 @@ export class CountriesService {
     }
   }
 
-  /**
-   * Мапінг структури країни
-   */
   private mapCountry(item: any, locale: string) {
     const attrs = item.attributes ?? item;
-
-    // --- Background ---
     const bg = attrs.Background?.data?.attributes ?? attrs.Background ?? null;
     const backgroundUrl = bg?.url ?? null;
-
-    // --- Gallery ---
     const galleryUrls =
       attrs.Gallery?.Photos?.map((photo: any) => {
         const p = photo?.attributes ?? photo;
         return p.url ?? null;
       }).filter(Boolean) ?? [];
 
-    // --- Ambassadors ---
     const ambassadors = Array.isArray(attrs.ambassadors)
       ? attrs.ambassadors.map((a: any) => {
           const amb = a.attributes ?? a;
@@ -117,7 +106,6 @@ export class CountriesService {
         })
       : [];
 
-    // --- Повертаємо результат ---
     return {
       id: item.id,
       CountryName: attrs.CountryName ?? "",
