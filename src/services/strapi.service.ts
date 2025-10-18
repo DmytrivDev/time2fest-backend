@@ -10,8 +10,9 @@ export class StrapiService {
   async get<T>(
     endpoint: string,
     locale?: string,
-    useCache = true
-  ): Promise<T | null> {
+    useCache = true,
+    withMeta = false // ✅ новий параметр
+  ): Promise<T | { data: T; meta: any } | null> {
     let fullPath = endpoint;
 
     if (locale) {
@@ -20,19 +21,29 @@ export class StrapiService {
     }
 
     const url = getStrapiUrl(fullPath);
-    const cacheKey = `strapi:${fullPath}`;
+    const cacheKey = `strapi:${fullPath}:meta:${withMeta ? 1 : 0}`;
 
+    // --- Кеш ---
     if (useCache) {
-      const cached = this.cache.get<T>(cacheKey);
+      const cached = this.cache.get<T | { data: T; meta: any }>(cacheKey);
       if (cached) return cached;
     }
 
     try {
-      const { data } = await axios.get<{ data: T }>(url, {
+      const response = await axios.get(url, {
         headers: getStrapiHeaders(),
       });
 
-      const result = data.data;
+      // --- Якщо запит з withMeta = true ---
+      let result: any;
+      if (withMeta) {
+        result = {
+          data: response.data?.data ?? response.data ?? null,
+          meta: response.data?.meta ?? null,
+        };
+      } else {
+        result = response.data?.data ?? response.data ?? null;
+      }
 
       if (useCache) {
         this.cache.set(cacheKey, result);

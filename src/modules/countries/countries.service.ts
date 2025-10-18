@@ -31,7 +31,7 @@ export class CountriesService {
       // --- Фільтри ---
       if (code) params.set("filters[CountryCode][$eq]", code.toUpperCase());
       if (slug) params.set("filters[slug][$eq]", slug.toLowerCase());
-      if (tz) params.set("filters[time_zones][code][$eq]", tz);
+      if (tz) params.set("filters[time_zones][code][$containsi]", tz);
 
       // --- Пагінація ---
       if (page && limit) {
@@ -44,21 +44,21 @@ export class CountriesService {
       const url = `/countries?${params.toString()}`;
       console.log("🌍 Fetching countries:", url);
 
-      // 🔧 Ключова зміна — беремо resp.data та resp.meta
-      const resp: any = await this.strapi.get(url);
+      const resp: any = await this.strapi.get(url, undefined, true, true);
 
-      const itemsRaw = resp?.data ?? [];
-      const meta = resp?.meta?.pagination ?? null;
+      // --- 🧠 Універсальний парсер Strapi-відповіді ---
+      const data =
+        resp?.data?.data ?? resp?.data ?? resp?.data?.results ?? resp ?? [];
 
-      // Якщо це не масив — повертаємо порожньо
-      if (!Array.isArray(itemsRaw)) {
-        return { items: [], meta };
-      }
+      const meta =
+        resp?.meta ?? resp?.data?.meta ?? resp?.data?.meta?.pagination ?? null;
 
-      // Мапимо країни
-      const items = itemsRaw.map((item: any) => this.mapCountry(item, locale));
-
-      return { items, meta };
+      return {
+        items: Array.isArray(data)
+          ? data.map((item: any) => this.mapCountry(item, locale))
+          : [],
+        meta,
+      };
     } catch (err) {
       const error = err as AxiosError;
       console.error(
