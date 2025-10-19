@@ -56,10 +56,12 @@ export class AuthController {
   @UseGuards(AuthGuard("google"))
   async googleCallback(@Req() req: Request, @Res() res: Response) {
     const user = req.user as any;
-
     const tokens = await this.authService.generateTokens(user);
 
-    const redirectUrl = new URL("https://time2fest.com/login-success");
+    // 🔹 Мова збережена у user.lang
+    const lang = user.lang && user.lang !== "en" ? `${user.lang}/` : "";
+
+    const redirectUrl = new URL(`https://time2fest.com/${lang}login-success`);
     redirectUrl.searchParams.set("accessToken", tokens.accessToken);
     redirectUrl.searchParams.set("refreshToken", tokens.refreshToken);
 
@@ -78,7 +80,10 @@ export class AuthController {
     const user = req.user as any;
     const tokens = await this.authService.generateTokens(user);
 
-    const redirectUrl = new URL("https://time2fest.com/login-success");
+    // 🔹 Формуємо редирект залежно від мови
+    const lang = user.lang && user.lang !== "en" ? `${user.lang}/` : "";
+    const redirectUrl = new URL(`https://time2fest.com/${lang}login-success`);
+
     redirectUrl.searchParams.set("accessToken", tokens.accessToken);
     redirectUrl.searchParams.set("refreshToken", tokens.refreshToken);
 
