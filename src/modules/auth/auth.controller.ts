@@ -56,9 +56,9 @@ export class AuthController {
   @UseGuards(AuthGuard("google"))
   async googleCallback(@Req() req: Request, @Res() res: Response) {
     const user = req.user as any;
-
     const tokens = await this.authService.generateTokens(user);
 
+    // ✅ Єдиний універсальний шлях
     const redirectUrl = new URL("https://time2fest.com/login-success");
     redirectUrl.searchParams.set("accessToken", tokens.accessToken);
     redirectUrl.searchParams.set("refreshToken", tokens.refreshToken);
