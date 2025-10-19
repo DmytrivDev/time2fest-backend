@@ -54,22 +54,15 @@ export class AuthController {
   // 🔹 Google OAuth Callback
   @Get("google/callback")
   @UseGuards(AuthGuard("google"))
-  async googleCallback(@Req() req: Request, @Res() res: Response) {
-    const user = req.user as any;
+  async googleCallback(@Req() req: any, @Res() res: Response) {
+    const user = req.user;
     const tokens = await this.authService.generateTokens(user);
 
-    // 🔹 Якщо кука є, зчитуємо мову, але не обов'язково
-    const cookies = req.headers.cookie || "";
-    const langMatch = cookies.match(/login_lang=([^;]+)/);
-    const lang = langMatch ? langMatch[1] : "en";
-
-    // 🔹 Перекидаємо все на одну стабільну адресу
-    const redirectUrl = new URL(`https://time2fest.com/login-success`);
+    const lang = user.lang || "en";
+    const redirectUrl = new URL(`https://time2fest.com/${lang}/login-success`);
     redirectUrl.searchParams.set("accessToken", tokens.accessToken);
     redirectUrl.searchParams.set("refreshToken", tokens.refreshToken);
-    redirectUrl.searchParams.set("lang", lang);
 
-    res.setHeader("Set-Cookie", "login_lang=; Max-Age=0; Path=/; SameSite=Lax");
     return res.redirect(redirectUrl.toString());
   }
 
@@ -81,23 +74,14 @@ export class AuthController {
   // 🔹 Facebook Callback
   @Get("facebook/callback")
   @UseGuards(AuthGuard("facebook"))
-  async facebookCallback(@Req() req: Request, @Res() res: Response) {
-    const user = req.user as any;
+  async facebookCallback(@Req() req: any, @Res() res: Response) {
+    const user = req.user;
     const tokens = await this.authService.generateTokens(user);
 
-    // Читаємо мову з куки
-    const cookies = req.headers.cookie || "";
-    const langMatch = cookies.match(/login_lang=([^;]+)/);
-    const lang = langMatch ? langMatch[1] : "en";
-
-    // Формуємо редирект
-    const redirectUrl = new URL("https://time2fest.com/login-success");
+    const lang = user.lang || "en";
+    const redirectUrl = new URL(`https://time2fest.com/${lang}/login-success`);
     redirectUrl.searchParams.set("accessToken", tokens.accessToken);
     redirectUrl.searchParams.set("refreshToken", tokens.refreshToken);
-    redirectUrl.searchParams.set("lang", lang);
-
-    // Очищаємо куку
-    res.setHeader("Set-Cookie", "login_lang=; Max-Age=0; Path=/; SameSite=Lax");
 
     return res.redirect(redirectUrl.toString());
   }
