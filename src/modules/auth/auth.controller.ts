@@ -58,10 +58,13 @@ export class AuthController {
     const user = req.user;
     const tokens = await this.authService.generateTokens(user);
 
+    // Беремо мову з user.lang або дефолтну "en"
     const lang = user.lang || "en";
-    const redirectUrl = new URL(`https://time2fest.com/${lang}/login-success`);
-    redirectUrl.searchParams.set("accessToken", tokens.accessToken);
-    redirectUrl.searchParams.set("refreshToken", tokens.refreshToken);
+
+    // ✅ Варіант, який точно не ламатиме React у проді
+    // (React Router завжди спрацює, бо все після "#" не йде на сервер)
+    const redirectUrl = new URL("https://time2fest.com/");
+    redirectUrl.hash = `/${lang}/login-success?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`;
 
     return res.redirect(redirectUrl.toString());
   }
@@ -79,9 +82,9 @@ export class AuthController {
     const tokens = await this.authService.generateTokens(user);
 
     const lang = user.lang || "en";
-    const redirectUrl = new URL(`https://time2fest.com/${lang}/login-success`);
-    redirectUrl.searchParams.set("accessToken", tokens.accessToken);
-    redirectUrl.searchParams.set("refreshToken", tokens.refreshToken);
+
+    const redirectUrl = new URL("https://time2fest.com/");
+    redirectUrl.hash = `/${lang}/login-success?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`;
 
     return res.redirect(redirectUrl.toString());
   }
