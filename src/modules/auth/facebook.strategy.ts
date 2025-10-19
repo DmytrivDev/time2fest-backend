@@ -15,7 +15,7 @@ export class FacebookStrategy extends PassportStrategy(Strategy, "facebook") {
         "http://localhost:3000/api/auth/facebook/callback",
       profileFields: ["id", "emails", "name", "displayName"],
       scope: ["email"],
-      passReqToCallback: true, // ✅ додаємо, щоб отримати req
+      passReqToCallback: true,
     });
   }
 
@@ -28,20 +28,13 @@ export class FacebookStrategy extends PassportStrategy(Strategy, "facebook") {
   ) {
     const { emails, displayName } = profile;
     const email = emails?.[0]?.value;
-
-    // 🔹 Отримуємо параметр мови з URL
-    const lang = (req.query.lang as string) || "en";
-
-    // 🔹 Створюємо або знаходимо користувача
+    const lang = (req.query.state as string) || "en"; // ✅ state зберігає мову
     const user = await this.authService.socialLogin({
       provider: "facebook",
       email,
       name: displayName,
     });
-
-    // 🔹 Додаємо мову, щоб контролер міг зробити редирект у правильну локаль
     (user as any).lang = lang;
-
     done(null, user);
   }
 }

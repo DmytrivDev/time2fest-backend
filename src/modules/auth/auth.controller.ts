@@ -58,10 +58,9 @@ export class AuthController {
     const user = req.user as any;
     const tokens = await this.authService.generateTokens(user);
 
-    // 🔹 Мова збережена у user.lang
     const lang = user.lang && user.lang !== "en" ? `${user.lang}/` : "";
-
     const redirectUrl = new URL(`https://time2fest.com/${lang}login-success`);
+
     redirectUrl.searchParams.set("accessToken", tokens.accessToken);
     redirectUrl.searchParams.set("refreshToken", tokens.refreshToken);
 
@@ -80,9 +79,12 @@ export class AuthController {
     const user = req.user as any;
     const tokens = await this.authService.generateTokens(user);
 
-    // 🔹 Формуємо редирект залежно від мови
-    const lang = user.lang && user.lang !== "en" ? `${user.lang}/` : "";
-    const redirectUrl = new URL(`https://time2fest.com/${lang}login-success`);
+    // 🔹 Беремо мову з user.lang або з req.query.state (як запасний варіант)
+    const lang = (user.lang as string) || (req.query.state as string) || "en";
+
+    // 🔹 Формуємо правильний редирект
+    const prefix = lang !== "en" ? `${lang}/` : "";
+    const redirectUrl = new URL(`https://time2fest.com/${prefix}login-success`);
 
     redirectUrl.searchParams.set("accessToken", tokens.accessToken);
     redirectUrl.searchParams.set("refreshToken", tokens.refreshToken);
