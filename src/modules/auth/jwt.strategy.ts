@@ -23,7 +23,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     // 🔹 Повертаємо лише безпечні поля
     return {
-      id: user.id,
+      id: user.id, 
       name: user.name || "",
       email: user.email || "",
     };
