@@ -54,17 +54,14 @@ export class AuthController {
   // 🔹 Google OAuth Callback
   @Get("google/callback")
   @UseGuards(AuthGuard("google"))
-  async googleCallback(@Req() req: any, @Res() res: Response) {
-    const user = req.user;
+  async googleCallback(@Req() req: Request, @Res() res: Response) {
+    const user = req.user as any;
+
     const tokens = await this.authService.generateTokens(user);
 
-    // Беремо мову з user.lang або дефолтну "en"
-    const lang = user.lang || "en";
-
-    // ✅ Варіант, який точно не ламатиме React у проді
-    // (React Router завжди спрацює, бо все після "#" не йде на сервер)
-    const redirectUrl = new URL("https://time2fest.com/");
-    redirectUrl.hash = `/${lang}/login-success?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`;
+    const redirectUrl = new URL("https://time2fest.com/login-success");
+    redirectUrl.searchParams.set("accessToken", tokens.accessToken);
+    redirectUrl.searchParams.set("refreshToken", tokens.refreshToken);
 
     return res.redirect(redirectUrl.toString());
   }
@@ -77,14 +74,13 @@ export class AuthController {
   // 🔹 Facebook Callback
   @Get("facebook/callback")
   @UseGuards(AuthGuard("facebook"))
-  async facebookCallback(@Req() req: any, @Res() res: Response) {
-    const user = req.user;
+  async facebookCallback(@Req() req: Request, @Res() res: Response) {
+    const user = req.user as any;
     const tokens = await this.authService.generateTokens(user);
 
-    const lang = user.lang || "en";
-
-    const redirectUrl = new URL("https://time2fest.com/");
-    redirectUrl.hash = `/${lang}/login-success?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`;
+    const redirectUrl = new URL("https://time2fest.com/login-success");
+    redirectUrl.searchParams.set("accessToken", tokens.accessToken);
+    redirectUrl.searchParams.set("refreshToken", tokens.refreshToken);
 
     return res.redirect(redirectUrl.toString());
   }

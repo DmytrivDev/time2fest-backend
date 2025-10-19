@@ -9,14 +9,15 @@ export class FacebookStrategy extends PassportStrategy(Strategy, "facebook") {
     super({
       clientID: process.env.FACEBOOK_APP_ID!,
       clientSecret: process.env.FACEBOOK_APP_SECRET!,
-      callbackURL: process.env.FACEBOOK_CALLBACK_URL!,
+      callbackURL:
+        process.env.FACEBOOK_CALLBACK_URL! ||
+        "http://localhost:3000/auth/facebook/callback",
       profileFields: ["emails", "name", "displayName"],
-      passReqToCallback: true, // 👈 дає доступ до req.query.state
+      passReqToCallback: false,
     });
   }
 
   async validate(
-    req: any,
     accessToken: string,
     refreshToken: string,
     profile: any,
@@ -25,14 +26,11 @@ export class FacebookStrategy extends PassportStrategy(Strategy, "facebook") {
     const { emails, displayName } = profile;
     const email = emails?.[0]?.value;
 
-    const user: any = await this.authService.socialLogin({
+    const user = await this.authService.socialLogin({
       provider: "facebook",
       email,
       name: displayName,
     });
-
-    // Зчитуємо мову зі state
-    user.lang = req.query.state || "en";
 
     done(null, user);
   }
