@@ -58,19 +58,18 @@ export class AuthController {
     const user = req.user as any;
     const tokens = await this.authService.generateTokens(user);
 
-    // 🔹 Отримуємо мову з куки
+    // 🔹 Якщо кука є, зчитуємо мову, але не обов'язково
     const cookies = req.headers.cookie || "";
     const langMatch = cookies.match(/login_lang=([^;]+)/);
     const lang = langMatch ? langMatch[1] : "en";
 
-    // 🔹 Формуємо URL редиректу
-    const redirectUrl = new URL(`https://time2fest.com/${lang}/login-success`);
+    // 🔹 Перекидаємо все на одну стабільну адресу
+    const redirectUrl = new URL(`https://time2fest.com/login-success`);
     redirectUrl.searchParams.set("accessToken", tokens.accessToken);
     redirectUrl.searchParams.set("refreshToken", tokens.refreshToken);
+    redirectUrl.searchParams.set("lang", lang);
 
-    // 🔹 Очищуємо куку, щоб не залишалася
     res.setHeader("Set-Cookie", "login_lang=; Max-Age=0; Path=/; SameSite=Lax");
-
     return res.redirect(redirectUrl.toString());
   }
 
@@ -86,14 +85,18 @@ export class AuthController {
     const user = req.user as any;
     const tokens = await this.authService.generateTokens(user);
 
+    // Читаємо мову з куки
     const cookies = req.headers.cookie || "";
     const langMatch = cookies.match(/login_lang=([^;]+)/);
     const lang = langMatch ? langMatch[1] : "en";
 
-    const redirectUrl = new URL(`https://time2fest.com/${lang}/login-success`);
+    // Формуємо редирект
+    const redirectUrl = new URL("https://time2fest.com/login-success");
     redirectUrl.searchParams.set("accessToken", tokens.accessToken);
     redirectUrl.searchParams.set("refreshToken", tokens.refreshToken);
+    redirectUrl.searchParams.set("lang", lang);
 
+    // Очищаємо куку
     res.setHeader("Set-Cookie", "login_lang=; Max-Age=0; Path=/; SameSite=Lax");
 
     return res.redirect(redirectUrl.toString());
