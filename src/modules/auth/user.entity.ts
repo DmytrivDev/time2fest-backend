@@ -29,7 +29,7 @@ export class User {
   @UpdateDateColumn()
   updatedAt!: Date;
 
-  @Column({ nullable: true })
+  @Column({ type: "text", nullable: true })
   resetToken!: string | null;
 
   @Column({ type: "timestamp", nullable: true })
