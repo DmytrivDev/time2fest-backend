@@ -10,7 +10,12 @@ import {
 } from "@nestjs/common";
 import { Request, Response } from "express";
 import { AuthService } from "./auth.service";
-import { RegisterDto, LoginDto } from "./dto";
+import {
+  RegisterDto,
+  LoginDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+} from "./dto";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import { AuthGuard } from "@nestjs/passport";
 import * as jwt from "jsonwebtoken";
@@ -101,5 +106,15 @@ export class AuthController {
     } catch {
       throw new UnauthorizedException("Invalid or expired refresh token");
     }
+  }
+
+  @Post("forgot-password")
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.email);
+  }
+
+  @Post("reset-password")
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto.token, dto.password);
   }
 }

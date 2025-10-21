@@ -28,4 +28,10 @@ export class User {
 
   @UpdateDateColumn()
   updatedAt!: Date;
+
+  @Column({ nullable: true })
+  resetToken!: string | null;
+
+  @Column({ type: "timestamp", nullable: true })
+  resetTokenExpires!: Date | null;
 }

@@ -10,6 +10,8 @@ import * as bcrypt from "bcrypt";
 import { User } from "./user.entity";
 import { RegisterDto, LoginDto } from "./dto";
 import * as jwt from "jsonwebtoken";
+import * as crypto from "crypto";
+import * as nodemailer from "nodemailer";
 
 @Injectable()
 export class AuthService {
@@ -100,5 +102,67 @@ export class AuthService {
   async validateUser(id: number) {
     return this.userRepo.findOne({ where: { id } });
   }
+
+  async forgotPassword(email: string) {
+    const user = await this.userRepo.findOne({ where: { email } });
+    if (!user) {
+      // Не розкриваємо, що користувача немає (для безпеки)
+      return { message: "If that email exists, password reset link sent." };
+    }
+
+    // Генеруємо токен
+    const token = crypto.randomBytes(32).toString("hex");
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 година
+    user.resetToken = token;
+    user.resetTokenExpires = expires;
+    await this.userRepo.save(user);
+
+    // Лінк для фронту
+    const link = `https://time2fest.com/reset-password?token=${token}`;
+
+    // Відправляємо лист (спрощений приклад)
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST!,
+      port: +process.env.SMTP_PORT!,
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"Time2Fest" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: "Password Reset",
+      html: `
+        <h2>Password reset request</h2>
+        <p>Click below to reset your password:</p>
+        <a href="${link}">${link}</a>
+        <p>This link will expire in 1 hour.</p>
+      `,
+    });
+
+    return { message: "If that email exists, password reset link sent." };
+  }
+
+  // ---- Скидання паролю ----
+  async resetPassword(token: string, newPassword: string) {
+    const user = await this.userRepo.findOne({ where: { resetToken: token } });
+
+    if (
+      !user ||
+      !user.resetTokenExpires ||
+      user.resetTokenExpires < new Date()
+    ) {
+      throw new BadRequestException("Invalid or expired reset token");
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetToken = null;
+    user.resetTokenExpires = null;
+
+    await this.userRepo.save(user);
+    return { message: "Password successfully updated." };
+  }
 }
- 
