@@ -109,8 +109,8 @@ export class AuthController {
   }
 
   @Post("forgot-password")
-  async forgotPassword(@Body() dto: ForgotPasswordDto) {
-    return this.authService.forgotPassword(dto.email);
+  async forgotPassword(@Body() dto: { email: string; locale?: string }) {
+    return this.authService.forgotPassword(dto.email, dto.locale);
   }
 
   @Post("reset-password")

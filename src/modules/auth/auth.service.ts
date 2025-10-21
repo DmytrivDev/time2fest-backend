@@ -103,10 +103,9 @@ export class AuthService {
     return this.userRepo.findOne({ where: { id } });
   }
 
-  async forgotPassword(email: string) {
+  async forgotPassword(email: string, locale = "en") {
     const user = await this.userRepo.findOne({ where: { email } });
 
-    // 🔹 Тепер явно повідомляємо, що користувача немає
     if (!user) {
       throw new BadRequestException("User not found");
     }
@@ -118,7 +117,9 @@ export class AuthService {
     user.resetTokenExpires = expires;
     await this.userRepo.save(user);
 
-    const link = `https://time2fest.com/reset-password?token=${token}`;
+    const baseUrl = process.env.FRONTEND_URL || "https://time2fest.com";
+    const langPrefix = locale && locale !== "en" ? `/${locale}` : "";
+    const link = `${baseUrl}${langPrefix}/reset-password?token=${token}`;
 
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST!,
@@ -135,11 +136,11 @@ export class AuthService {
       to: email,
       subject: "Password Reset",
       html: `
-      <h2>Password reset request</h2>
-      <p>Click below to reset your password:</p>
-      <a href="${link}" target="_blank" style="color:#f94a51; font-weight:bold;">Reset password</a>
-      <p>This link will expire in 1 hour.</p>
-    `,
+        <h2>Password reset request</h2>
+        <p>Click below to reset your password:</p>
+        <a href="${link}" target="_blank" style="color:#f94a51; font-weight:bold;">Reset password</a>
+        <p>This link will expire in 1 hour.</p>
+      `,
     });
 
     return { message: "Password reset link sent." };
