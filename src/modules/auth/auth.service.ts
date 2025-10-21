@@ -105,29 +105,28 @@ export class AuthService {
 
   async forgotPassword(email: string) {
     const user = await this.userRepo.findOne({ where: { email } });
+
+    // 🔹 Тепер явно повідомляємо, що користувача немає
     if (!user) {
-      // Не розкриваємо, що користувача немає (для безпеки)
-      return { message: "If that email exists, password reset link sent." };
+      throw new BadRequestException("User not found");
     }
 
-    // Генеруємо токен
     const token = crypto.randomBytes(32).toString("hex");
     const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 година
+
     user.resetToken = token;
     user.resetTokenExpires = expires;
     await this.userRepo.save(user);
 
-    // Лінк для фронту
     const link = `https://time2fest.com/reset-password?token=${token}`;
 
-    // Відправляємо лист (спрощений приклад)
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST!,
       port: +process.env.SMTP_PORT!,
       secure: false,
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
+        user: process.env.SMTP_USER!,
+        pass: process.env.SMTP_PASS!,
       },
     });
 
@@ -136,14 +135,14 @@ export class AuthService {
       to: email,
       subject: "Password Reset",
       html: `
-        <h2>Password reset request</h2>
-        <p>Click below to reset your password:</p>
-        <a href="${link}">${link}</a>
-        <p>This link will expire in 1 hour.</p>
-      `,
+      <h2>Password reset request</h2>
+      <p>Click below to reset your password:</p>
+      <a href="${link}" target="_blank" style="color:#f94a51; font-weight:bold;">Reset password</a>
+      <p>This link will expire in 1 hour.</p>
+    `,
     });
 
-    return { message: "If that email exists, password reset link sent." };
+    return { message: "Password reset link sent." };
   }
 
   // ---- Скидання паролю ----
