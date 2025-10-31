@@ -9,4 +9,4 @@ import { StrapiModule } from "../strapi/strapi.module"; // краще імпор
   controllers: [CountriesController],
   exports: [CountriesService],
 })
-export class CountriesModule {}
+export class CountriesModule {} 
