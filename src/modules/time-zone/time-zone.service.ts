@@ -45,7 +45,7 @@ export class TimeZoneService {
           locale: a.locale ?? locale,
           TimezoneDetail:
             a.TimezoneDetail?.data ??
-            a.TimezoneDetail ??
+            a.TimezoneDetail ?? 
             c.TimezoneDetail?.data ??
             c.TimezoneDetail ??
             [],
