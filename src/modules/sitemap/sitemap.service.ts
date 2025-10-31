@@ -1,12 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import { StrapiService } from "../../services/strapi.service";
 import { AmbassadorsListService } from "../ambassadors-list/ambassadors-list.service";
+import { CountriesService } from "../countries/countries.service";
 
 @Injectable()
 export class SitemapService {
   constructor(
     private readonly strapi: StrapiService,
-    private readonly ambassadorsList: AmbassadorsListService
+    private readonly ambassadorsList: AmbassadorsListService,
+    private readonly СountriesList: CountriesService
   ) {}
 
   async getUrls() {
@@ -75,6 +77,38 @@ export class SitemapService {
       }
     } catch (err) {
       console.error("❌ Error fetching ambassadors for sitemap:", err);
+    }
+
+    // 📌 2. Динамічні сторінки Країн
+    try {
+      for (const locale of locales) {
+        const countriesResp = await this.СountriesList.getCountry(
+          undefined,
+          undefined,
+          locale
+        );
+        const countries = countriesResp?.items ?? [];
+
+        if (Array.isArray(countries) && countries.length > 0) {
+          countries.forEach((country: any) => {
+            const slug = country.slug;
+            if (!slug) return;
+
+            const loc =
+              locale === "en"
+                ? `${baseUrl}/country/${slug}`
+                : `${baseUrl}/${locale}/country/${slug}`;
+
+            urls.push({
+              loc,
+              changefreq: "weekly",
+              priority: 0.7,
+            });
+          });
+        }
+      }
+    } catch (err) {
+      console.error("❌ Error fetching countries for sitemap:", err);
     }
 
     return urls;
