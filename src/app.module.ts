@@ -20,6 +20,7 @@ import { TextModule } from "./modules/text/text.module";
 import { AmbassadorsListModule } from "./modules/ambassadors-list/ambassadors-list.module";
 import { ContactsModule } from "./modules/contacts/contacts.module";
 import { AuthModule } from './modules/auth/auth.module';
+import { UserScheduleModule  } from './modules/user-schedule/user-schedule.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { AuthModule } from './modules/auth/auth.module';
     TextModule,
     AmbassadorsListModule,
     ContactsModule,
+    UserScheduleModule ,
   ],
 })
 export class AppModule {}
