@@ -11,7 +11,8 @@ async function bootstrap() {
 
   // --- CORS ---
   app.enableCors({
-    origin: process.env.CLIENT_ORIGIN || "http://localhost:3000",
+    origin: ["http://localhost:3000", "https://time2fest.com"],
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   });
 
