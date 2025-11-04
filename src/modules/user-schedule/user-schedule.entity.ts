@@ -1,14 +1,21 @@
-import { Entity, Column, PrimaryGeneratedColumn, UpdateDateColumn, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+  CreateDateColumn,
+} from "typeorm";
 
-@Entity('user_schedules')
+@Entity("user_schedules")
 export class UserSchedule {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id!: string;
 
-  @Column({ type: 'uuid', unique: true })
-  user_id!: string;
+  // 👇 ЗМІНА ТУТ — було type: 'uuid'
+  @Column({ type: "int", unique: true })
+  user_id!: number;
 
-  @Column({ type: 'jsonb', default: [] })
+  @Column({ type: "jsonb", default: [] })
   countries!: any[];
 
   @CreateDateColumn()

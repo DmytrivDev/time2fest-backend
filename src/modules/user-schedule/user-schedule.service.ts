@@ -1,16 +1,16 @@
-import { Injectable } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { UserSchedule } from "./user-schedule.entity";
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { UserSchedule } from './user-schedule.entity';
 
 @Injectable()
 export class UserScheduleService {
   constructor(
     @InjectRepository(UserSchedule)
-    private readonly repo: Repository<UserSchedule>
+    private readonly repo: Repository<UserSchedule>,
   ) {}
 
-  async getByUser(userId: string) {
+  async getByUser(userId: number) {
     let schedule = await this.repo.findOne({ where: { user_id: userId } });
 
     // Якщо запис ще не створений — створюємо його
@@ -22,7 +22,7 @@ export class UserScheduleService {
     return schedule;
   }
 
-  async update(userId: string, countries: any[]) {
+  async update(userId: number, countries: any[]) {
     let schedule = await this.repo.findOne({ where: { user_id: userId } });
 
     if (!schedule) {
