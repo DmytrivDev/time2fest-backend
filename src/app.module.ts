@@ -21,6 +21,7 @@ import { AmbassadorsListModule } from "./modules/ambassadors-list/ambassadors-li
 import { ContactsModule } from "./modules/contacts/contacts.module";
 import { AuthModule } from './modules/auth/auth.module';
 import { UserScheduleModule  } from './modules/user-schedule/user-schedule.module';
+import { CountriesLightModule } from './modules/countries-light/countries-light.module';
 
 @Module({
   imports: [
@@ -45,7 +46,8 @@ import { UserScheduleModule  } from './modules/user-schedule/user-schedule.modul
     TextModule,
     AmbassadorsListModule,
     ContactsModule,
-    UserScheduleModule ,
+    UserScheduleModule,
+    CountriesLightModule,
   ],
 })
 export class AppModule {}
