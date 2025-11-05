@@ -22,7 +22,7 @@ export class CountriesLightService {
           ) {
             cleanZone = "+" + cleanZone;
           }
-
+ 
           const params = new URLSearchParams();
           params.set("filters[slug][$eq]", slug.toLowerCase());
           params.set("populate[TimezoneDetail]", "true");
