@@ -31,7 +31,10 @@ export class CountriesService {
       // --- Фільтри ---
       if (code) params.set("filters[CountryCode][$eq]", code.toUpperCase());
       if (slug) params.set("filters[slug][$eq]", slug.toLowerCase());
-      if (tz) params.set("filters[time_zones][code][$containsi]", tz);
+      if (tz) {
+        const safeTz = decodeURIComponent(tz).replace(/\s+/g, "").trim();
+        params.set("filters[time_zones][code][$eq]", safeTz);
+      }
 
       // --- Пагінація ---
       if (page && limit) {

@@ -5,10 +5,6 @@ import { CountriesLightService } from "./countries-light.service";
 export class CountriesLightController {
   constructor(private readonly countriesLightService: CountriesLightService) {}
 
-  /**
-   * GET /api/countries-light?zones=ukraine:UTC+2,fiji:UTC+12&locale=en
-   * Повертає легкі дані для графіка святкувань.
-   */
   @Get()
   async getLight(
     @Query("zones") zones: string,
@@ -16,14 +12,19 @@ export class CountriesLightController {
   ) {
     if (!zones) return [];
 
-    // приклад: zones=ukraine:UTC+2,new-zealand:UTC+13
+    // ✅ Парсимо без втрати двокрапок у часових зонах
     const pairs = zones
       .split(",")
-      .map(pair => {
-        const [slug, zone] = pair.split(":");
-        return { slug: slug?.trim(), zone: zone?.trim() };
+      .map((pair) => {
+        const firstColonIndex = pair.indexOf(":");
+        if (firstColonIndex === -1) return null;
+
+        const slug = pair.slice(0, firstColonIndex).trim();
+        const zone = pair.slice(firstColonIndex + 1).trim();
+
+        return slug && zone ? { slug, zone } : null;
       })
-      .filter(p => p.slug && p.zone);
+      .filter((p): p is { slug: string; zone: string } => p !== null); // 👈 ось це головне
 
     return this.countriesLightService.getLightCountries(pairs, locale);
   }
