@@ -13,7 +13,15 @@ export class CountriesLightService {
       const results = await Promise.all(
         pairs.map(async ({ slug, zone }) => {
           // 1️⃣ Нормалізуємо часову зону — прибираємо "UTC"
-          const cleanZone = zone.replace(/^UTC\s*/i, "").trim();
+          let cleanZone = zone.replace(/UTC/i, "").trim();
+
+          if (
+            !cleanZone.startsWith("+") &&
+            !cleanZone.startsWith("-") &&
+            cleanZone !== ""
+          ) {
+            cleanZone = "+" + cleanZone;
+          }
 
           const params = new URLSearchParams();
           params.set("filters[slug][$eq]", slug.toLowerCase());
@@ -49,9 +57,7 @@ export class CountriesLightService {
           const hasCamera = match ? Boolean(match.VebCamera) : false;
 
           console.log(
-            `✅ ${slug}: Zone=${cleanZone} → match=${
-              !!match
-            }, Ambassador=${hasAmbassador}, Camera=${hasCamera}`
+            `✅ ${slug}: Zone=${cleanZone} → match=${!!match}, Ambassador=${hasAmbassador}, Camera=${hasCamera}`
           );
 
           return {
