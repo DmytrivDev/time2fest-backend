@@ -17,14 +17,24 @@ export class UserService {
     private readonly userRepository: Repository<User>
   ) {}
 
-  // --- Зміна імені профілю ---
+  // --- Зміна імені або налаштувань профілю ---
   async updateProfile(userId: number, dto: UpdateProfileDto) {
     if (!userId) throw new NotFoundException("User not found");
 
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException("User not found");
 
-    user.name = dto.name.trim();
+    // 🔹 Якщо передано name
+    if (dto.name !== undefined) {
+      const trimmed = dto.name.trim();
+      if (!trimmed) throw new BadRequestException("Name cannot be empty");
+      user.name = trimmed;
+    }
+
+    // 🔹 Якщо передано newsletter
+    if (dto.newsletter !== undefined) {
+      user.newsletter = dto.newsletter;
+    }
 
     await this.userRepository.save(user);
 
@@ -35,6 +45,7 @@ export class UserService {
         id: user.id,
         email: user.email,
         name: user.name,
+        newsletter: user.newsletter,
       },
     };
   }
