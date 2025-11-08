@@ -90,24 +90,6 @@ export class AuthController {
     return res.redirect(redirectUrl.toString());
   }
 
-  @Get("apple")
-  @UseGuards(AuthGuard("apple"))
-  async appleLogin() {}
-
-  // 🔹 Apple Callback
-  @Get("apple/callback")
-  @UseGuards(AuthGuard("apple"))
-  async appleCallback(@Req() req: Request, @Res() res: Response) {
-    const user = req.user as any;
-    const tokens = await this.authService.generateTokens(user);
-
-    const redirectUrl = new URL("https://time2fest.com/login-success");
-    redirectUrl.searchParams.set("accessToken", tokens.accessToken);
-    redirectUrl.searchParams.set("refreshToken", tokens.refreshToken);
-
-    return res.redirect(redirectUrl.toString());
-  }
-
   // 🔹 Оновлення токена
   @Post("refresh")
   async refresh(@Body("refreshToken") token: string) {
