@@ -23,6 +23,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UserScheduleModule  } from './modules/user-schedule/user-schedule.module';
 import { CountriesLightModule } from './modules/countries-light/countries-light.module';
 import { UserModule  } from './modules/user/user.module';
+import { ProfilePageModule  } from './modules/profile-page/profile-page.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { UserModule  } from './modules/user/user.module';
     UserScheduleModule,
     CountriesLightModule,
     UserModule,
+    ProfilePageModule,
   ],
 })
 export class AppModule {}
