@@ -15,6 +15,7 @@ export class TimeZoneService {
 
       // 👉 залишаємо тільки TimezoneDetail
       qs.set("populate[countries][populate][0]", "TimezoneDetail");
+      qs.set("populate[countries][populate][0]", "Background");
 
       // 👉 фінальний URL
       const url = `/time-zones?${qs.toString()}`;
@@ -41,6 +42,7 @@ export class TimeZoneService {
           CountryCode: a.CountryCode,
           CountryDesc: a.CountryDesc,
           ShortDesc: a.ShortDesc,
+          Background: a.Background,
           slug: a.slug,
           locale: a.locale ?? locale,
           TimezoneDetail:
