@@ -13,4 +13,4 @@ export class ProfilePageService {
 
     return this.strapi.get(url);
   }
-}
+} 
