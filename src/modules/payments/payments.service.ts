@@ -40,7 +40,7 @@ export class PaymentsService {
           email,
         },
         success_url: "https://time2fest.com/payment/success",
-        cancel_url: "https://time2fest.com/payment/cancel",
+        cancel_url: "https://time2fest.com/payment/cancel", 
       });
 
       return response.data.data;
