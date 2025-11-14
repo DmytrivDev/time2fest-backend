@@ -4,9 +4,7 @@ import { PaymentsService } from './payments.service';
 import { UserModule } from '../user/user.module';
 
 @Module({
-  imports: [
-    UserModule, // ⬅ потрібно, щоб мати доступ до UserService
-  ],
+  imports: [UserModule],
   controllers: [PaymentsController],
   providers: [PaymentsService],
 })
