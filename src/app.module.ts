@@ -25,7 +25,7 @@ import { CountriesLightModule } from './modules/countries-light/countries-light.
 import { UserModule  } from './modules/user/user.module';
 import { ProfilePageModule  } from './modules/profile-page/profile-page.module';
 import { PaymentsModule  } from './modules/payments/payments.module';
-
+ 
 @Module({
   imports: [
     TypeOrmModule.forRoot(databaseCoreConfig),
