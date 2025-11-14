@@ -17,21 +17,19 @@ export class UserService {
     private readonly userRepository: Repository<User>
   ) {}
 
-  // --- Зміна імені або налаштувань профілю ---
+  // --- Оновлення профілю ---
   async updateProfile(userId: number, dto: UpdateProfileDto) {
     if (!userId) throw new NotFoundException("User not found");
 
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException("User not found");
 
-    // 🔹 Якщо передано name
     if (dto.name !== undefined) {
       const trimmed = dto.name.trim();
       if (!trimmed) throw new BadRequestException("Name cannot be empty");
       user.name = trimmed;
     }
 
-    // 🔹 Якщо передано newsletter
     if (dto.newsletter !== undefined) {
       user.newsletter = dto.newsletter;
     }
@@ -46,6 +44,7 @@ export class UserService {
         email: user.email,
         name: user.name,
         newsletter: user.newsletter,
+        isPremium: user.isPremium,
       },
     };
   }
@@ -57,13 +56,11 @@ export class UserService {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException("User not found");
 
-    // 🔹 Перевіряємо поточний пароль
     const isValid = await bcrypt.compare(dto.currentPassword, user.password);
     if (!isValid) {
       throw new BadRequestException("Invalid current password");
     }
 
-    // 🔹 Хешуємо новий пароль
     const hashed = await bcrypt.hash(dto.newPassword, 10);
     user.password = hashed;
 
@@ -73,5 +70,20 @@ export class UserService {
       success: true,
       message: "Password changed successfully",
     };
+  }
+
+  // 🔥 --- Встановлення Premium-статусу (викликається Paddle webhook) ---
+  async setPremium(email: string) {
+    const user = await this.userRepository.findOne({ where: { email } });
+
+    if (!user) {
+      console.warn("Paddle webhook: user not found for email:", email);
+      return;
+    }
+
+    user.isPremium = true;
+    await this.userRepository.save(user);
+
+    return { success: true };
   }
 }

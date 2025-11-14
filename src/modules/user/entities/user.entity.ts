@@ -17,6 +17,9 @@ export class User {
   @Column({ default: false })
   newsletter!: boolean;
 
+  @Column({ default: false })
+  isPremium!: boolean;
+
   @CreateDateColumn()
   createdAt!: Date;
 

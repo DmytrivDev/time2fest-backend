@@ -24,6 +24,7 @@ import { UserScheduleModule  } from './modules/user-schedule/user-schedule.modul
 import { CountriesLightModule } from './modules/countries-light/countries-light.module';
 import { UserModule  } from './modules/user/user.module';
 import { ProfilePageModule  } from './modules/profile-page/profile-page.module';
+import { PaymentsModule  } from './modules/payments/payments.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { ProfilePageModule  } from './modules/profile-page/profile-page.module';
     CountriesLightModule,
     UserModule,
     ProfilePageModule,
+    PaymentsModule,
   ],
 })
 export class AppModule {}

@@ -2,12 +2,10 @@ import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { ValidationPipe } from "@nestjs/common";
 import morgan from "morgan";
+import * as express from "express";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
-  // --- Глобальний префікс ---
-  app.setGlobalPrefix("api");
 
   // --- CORS ---
   app.enableCors({
@@ -16,7 +14,20 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // --- Middleware: логування запитів ---
+  // 🚨 MUST HAVE for Paddle webhooks:
+  // Зберігаємо сирий body перед JSON парсингом
+  app.use(
+    express.json({
+      verify: (req: any, res, buf) => {
+        req.rawBody = buf.toString();
+      },
+    })
+  );
+
+  // --- Global prefix ---
+  app.setGlobalPrefix("api");
+
+  // --- Logging ---
   app.use(morgan("dev"));
 
   // --- ValidationPipe ---
