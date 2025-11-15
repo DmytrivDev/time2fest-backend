@@ -22,7 +22,7 @@ export class PaymentsController {
     const signature = req.headers['paddle-signature'];
     const timestamp = req.headers['paddle-timestamp'];
 
-    console.log("🔐 Signature headers:", { signature, timestamp });
+    console.log("🔐 Headers:", { signature, timestamp });
 
     const isValid = this.paymentsService.verifyWebhookSignature(
       rawBody,

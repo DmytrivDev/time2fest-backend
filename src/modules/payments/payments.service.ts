@@ -16,20 +16,10 @@ export class PaymentsService {
       "PADDLE_WEBHOOK_SECRET:",
       process.env.PADDLE_WEBHOOK_SECRET?.slice(0, 6) + "..."
     );
-
-    if (!process.env.PADDLE_API_KEY) {
-      console.error("❌ FATAL: PADDLE_API_KEY missing");
-    }
-    if (!process.env.PADDLE_PRICE_ID) {
-      console.error("❌ FATAL: PADDLE_PRICE_ID missing");
-    }
-    if (!process.env.PADDLE_WEBHOOK_SECRET) {
-      console.error("❌ FATAL: PADDLE_WEBHOOK_SECRET missing");
-    }
   }
 
   private readonly api = axios.create({
-    baseURL: "https://api.paddle.com",
+    baseURL: "https://api.paddle.com", // ✔ PRODUCTION URL
     headers: {
       Authorization: `Bearer ${process.env.PADDLE_API_KEY}`,
       "Content-Type": "application/json",
@@ -37,48 +27,54 @@ export class PaymentsService {
   });
 
   // ───────────────────────────────────────────────
-  // CREATE CHECKOUT SESSION
+  // CREATE CHECKOUT SESSION (Paddle 2.0)
   // ───────────────────────────────────────────────
   async createCheckout(email: string) {
     const priceId = process.env.PADDLE_PRICE_ID;
 
     console.log("➡️ [CHECKOUT] Creating checkout for:", email);
     console.log("➡️ Using price_id:", priceId);
+    console.log("➡️ BASE URL:", this.api.defaults.baseURL);
+
+    const body = {
+      items: [
+        {
+          price_id: priceId,
+          quantity: 1,
+        },
+      ],
+      customer: {
+        email,
+      },
+      success_url: "https://time2fest.com/payment/success",
+      cancel_url: "https://time2fest.com/payment/cancel",
+    };
+
+    console.log("📤 FULL REQUEST BODY:", JSON.stringify(body, null, 2));
 
     try {
-      const response = await this.api.post("/checkout/sessions", {
-        items: [
-          {
-            price_id: priceId,
-            quantity: 1,
-          },
-        ],
-        customer: {
-          email,
-        },
-
-        // ВАЖЛИВО: Paddle вимагає return_url, а не success/cancel
-        return_url: "https://time2fest.com/payment/success",
-      });
+      const response = await this.api.post("/checkout/sessions", body);
 
       console.log("✔️ Paddle response:", response.data);
 
       return response.data.data;
     } catch (error: any) {
       console.error("❌ [CHECKOUT ERROR]: FULL DUMP ↓↓↓");
-      console.error("Request body:", error.config?.data);
-      console.error("Paddle response:", error.response?.data);
-      console.error("Status:", error.response?.status);
-      console.error("Error message:", error.message);
+      console.error("➡️ Config URL:", error.config?.url);
+      console.error("➡️ Request data:", error.config?.data);
+      console.error("➡️ Paddle response:", error.response?.data);
+      console.error("➡️ Status:", error.response?.status);
+      console.error("➡️ Error message:", error.message);
 
       throw new InternalServerErrorException(
-        "Failed to create checkout session"
+        error.response?.data?.error?.detail ||
+          "Failed to create checkout session"
       );
     }
-  } 
+  }
 
   // ───────────────────────────────────────────────
-  // VERIFY WEBHOOK SIGNATURE
+  // VERIFY WEBHOOK SIGNATURE (HMAC SHA256)
   // ───────────────────────────────────────────────
   verifyWebhookSignature(
     rawBody: string,
@@ -87,8 +83,10 @@ export class PaymentsService {
   ) {
     console.log("🟡 [WEBHOOK] Verifying signature...");
 
-    if (!process.env.PADDLE_WEBHOOK_SECRET) {
-      console.error("❌ Webhook secret missing");
+    const secret = process.env.PADDLE_WEBHOOK_SECRET;
+
+    if (!secret) {
+      console.error("❌ Missing webhook secret");
       return false;
     }
 
@@ -102,9 +100,12 @@ export class PaymentsService {
     }
 
     const expected = crypto
-      .createHmac("sha256", process.env.PADDLE_WEBHOOK_SECRET)
+      .createHmac("sha256", secret)
       .update(`${timestamp}.${rawBody}`)
       .digest("hex");
+
+    console.log("🔍 Expected:", expected);
+    console.log("🔍 Received:", signature);
 
     const valid = expected === signature;
     console.log("🔍 Signature match:", valid);
