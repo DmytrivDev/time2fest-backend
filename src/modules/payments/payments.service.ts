@@ -75,7 +75,7 @@ export class PaymentsService {
         "Failed to create checkout session"
       );
     }
-  }
+  } 
 
   // ───────────────────────────────────────────────
   // VERIFY WEBHOOK SIGNATURE
