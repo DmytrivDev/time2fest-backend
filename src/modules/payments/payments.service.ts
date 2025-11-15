@@ -19,7 +19,7 @@ export class PaymentsService {
   }
 
   private readonly api = axios.create({
-    baseURL: "https://sandbox-api.paddle.com", // ✔ PRODUCTION URL
+    baseURL: "https://api.paddle.com", // ✔ PRODUCTION URL
     headers: {
       Authorization: `Bearer ${process.env.PADDLE_API_KEY}`,
       "Content-Type": "application/json",
