@@ -7,9 +7,15 @@ import { UserService } from "../user/user.service";
 export class PaymentsService {
   constructor(private readonly usersService: UserService) {
     console.log("🟡 Loaded ENV:");
-    console.log("PADDLE_API_KEY:", process.env.PADDLE_API_KEY?.slice(0, 10) + "...");
+    console.log(
+      "PADDLE_API_KEY:",
+      process.env.PADDLE_API_KEY?.slice(0, 10) + "..."
+    );
     console.log("PADDLE_PRICE_ID:", process.env.PADDLE_PRICE_ID);
-    console.log("PADDLE_WEBHOOK_SECRET:", process.env.PADDLE_WEBHOOK_SECRET?.slice(0, 6) + "...");
+    console.log(
+      "PADDLE_WEBHOOK_SECRET:",
+      process.env.PADDLE_WEBHOOK_SECRET?.slice(0, 6) + "..."
+    );
 
     if (!process.env.PADDLE_API_KEY) {
       console.error("❌ FATAL: PADDLE_API_KEY missing");
@@ -34,45 +40,51 @@ export class PaymentsService {
   // CREATE CHECKOUT SESSION
   // ───────────────────────────────────────────────
   async createCheckout(email: string) {
+    const priceId = process.env.PADDLE_PRICE_ID;
+
     console.log("➡️ [CHECKOUT] Creating checkout for:", email);
-    console.log("➡️ Using price_id:", process.env.PADDLE_PRICE_ID);
+    console.log("➡️ Using price_id:", priceId);
 
     try {
       const response = await this.api.post("/checkout/sessions", {
         items: [
           {
-            price_id: process.env.PADDLE_PRICE_ID,
+            price_id: priceId,
             quantity: 1,
           },
         ],
         customer: {
           email,
         },
-        success_url: "https://time2fest.com/payment/success",
-        cancel_url: "https://time2fest.com/payment/cancel",
+
+        // ВАЖЛИВО: Paddle вимагає return_url, а не success/cancel
+        return_url: "https://time2fest.com/payment/success",
       });
 
-      console.log("✔️ [CHECKOUT] Paddle response:", response.data);
-      return response.data.data;
+      console.log("✔️ Paddle response:", response.data);
 
+      return response.data.data;
     } catch (error: any) {
       console.error("❌ [CHECKOUT ERROR]: FULL DUMP ↓↓↓");
-      console.error("Request body:", {
-        items: [{ price_id: process.env.PADDLE_PRICE_ID }],
-        email,
-      });
+      console.error("Request body:", error.config?.data);
       console.error("Paddle response:", error.response?.data);
       console.error("Status:", error.response?.status);
       console.error("Error message:", error.message);
 
-      throw new InternalServerErrorException("Failed to create checkout session");
+      throw new InternalServerErrorException(
+        "Failed to create checkout session"
+      );
     }
   }
 
   // ───────────────────────────────────────────────
   // VERIFY WEBHOOK SIGNATURE
   // ───────────────────────────────────────────────
-  verifyWebhookSignature(rawBody: string, signature: string, timestamp: string) {
+  verifyWebhookSignature(
+    rawBody: string,
+    signature: string,
+    timestamp: string
+  ) {
     console.log("🟡 [WEBHOOK] Verifying signature...");
 
     if (!process.env.PADDLE_WEBHOOK_SECRET) {
