@@ -24,7 +24,7 @@ export class PaymentsService {
       Authorization: `Bearer ${process.env.PADDLE_API_KEY}`,
       "Content-Type": "application/json",
     },
-  });
+  }); 
 
   // ───────────────────────────────────────────────
   // CREATE CHECKOUT SESSION (Paddle 2.0)
