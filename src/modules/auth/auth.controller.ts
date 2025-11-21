@@ -25,7 +25,7 @@ import * as bcrypt from "bcrypt";
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // 🔹 Звичайна реєстрація
+  // 🔹 Реєстрація
   @Post("register")
   async register(@Body() dto: RegisterDto) {
     const user = await this.authService.register(dto);
@@ -41,7 +41,15 @@ export class AuthController {
     return { ...user, ...tokens };
   }
 
-  // 🔹 Профіль користувача
+  // 🔹 НОВЕ! /auth/me (саме це хоче фронтенд)
+  @UseGuards(JwtAuthGuard)
+  @Get("me")
+  getMe(@Req() req: any) {
+    const { password, refreshToken, ...safeUser } = req.user;
+    return safeUser;
+  }
+
+  // 🔹 Профіль (залишаємо для бекофісу, якщо потрібно)
   @UseGuards(JwtAuthGuard)
   @Get("profile")
   getProfile(@Req() req: any) {
@@ -52,9 +60,7 @@ export class AuthController {
   // 🔹 Google OAuth Redirect
   @Get("google")
   @UseGuards(AuthGuard("google"))
-  async googleAuth() {
-    // Redirect to Google login
-  }
+  async googleAuth() {}
 
   // 🔹 Google OAuth Callback
   @Get("google/callback")
@@ -63,7 +69,6 @@ export class AuthController {
     const user = req.user as any;
     const tokens = await this.authService.generateTokens(user);
 
-    // ✅ Єдиний універсальний шлях
     const redirectUrl = new URL("https://time2fest.com/login-success");
     redirectUrl.searchParams.set("accessToken", tokens.accessToken);
     redirectUrl.searchParams.set("refreshToken", tokens.refreshToken);
@@ -90,7 +95,7 @@ export class AuthController {
     return res.redirect(redirectUrl.toString());
   }
 
-  // 🔹 Оновлення токена
+  // 🔹 Refresh Token
   @Post("refresh")
   async refresh(@Body("refreshToken") token: string) {
     try {
