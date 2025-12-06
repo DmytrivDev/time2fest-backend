@@ -29,16 +29,14 @@ export class AuthController {
   @Post("register")
   async register(@Body() dto: RegisterDto) {
     const user = await this.authService.register(dto);
-    const tokens = await this.authService.generateTokens(user as any);
-    return { ...user, ...tokens };
+    return this.authService.generateTokens(user as any);
   }
 
   // 🔹 Логін
   @Post("login")
   async login(@Body() dto: LoginDto) {
     const user = await this.authService.login(dto);
-    const tokens = await this.authService.generateTokens(user as any);
-    return { ...user, ...tokens };
+    return this.authService.generateTokens(user as any);
   }
 
   // 🔹 НОВЕ! /auth/me (саме це хоче фронтенд)
@@ -57,40 +55,58 @@ export class AuthController {
     return safeUser;
   }
 
+  // ---------------------------
   // 🔹 Google OAuth Redirect
+  // ---------------------------
   @Get("google")
   @UseGuards(AuthGuard("google"))
-  async googleAuth() {}
+  async googleAuth() {
+    // Nest сам редіректить на Google
+  }
 
+  // ---------------------------
   // 🔹 Google OAuth Callback
+  // ---------------------------
   @Get("google/callback")
   @UseGuards(AuthGuard("google"))
   async googleCallback(@Req() req: Request, @Res() res: Response) {
     const user = req.user as any;
-    const tokens = await this.authService.generateTokens(user);
 
+    // 👉 Генеруємо ОБИДВА токени + user
+    const { accessToken, refreshToken } = await this.authService.generateTokens(
+      user
+    );
+
+    // 👉 Редірект на фронт
     const redirectUrl = new URL("https://time2fest.com/login-success");
-    redirectUrl.searchParams.set("accessToken", tokens.accessToken);
-    redirectUrl.searchParams.set("refreshToken", tokens.refreshToken);
+    redirectUrl.searchParams.set("accessToken", accessToken);
+    redirectUrl.searchParams.set("refreshToken", refreshToken);
 
     return res.redirect(redirectUrl.toString());
   }
 
+  // ---------------------------
   // 🔹 Facebook OAuth Redirect
+  // ---------------------------
   @Get("facebook")
   @UseGuards(AuthGuard("facebook"))
   async facebookLogin() {}
 
-  // 🔹 Facebook Callback
+  // ---------------------------
+  // 🔹 Facebook OAuth Callback
+  // ---------------------------
   @Get("facebook/callback")
   @UseGuards(AuthGuard("facebook"))
   async facebookCallback(@Req() req: Request, @Res() res: Response) {
     const user = req.user as any;
-    const tokens = await this.authService.generateTokens(user);
+
+    const { accessToken, refreshToken } = await this.authService.generateTokens(
+      user
+    );
 
     const redirectUrl = new URL("https://time2fest.com/login-success");
-    redirectUrl.searchParams.set("accessToken", tokens.accessToken);
-    redirectUrl.searchParams.set("refreshToken", tokens.refreshToken);
+    redirectUrl.searchParams.set("accessToken", accessToken);
+    redirectUrl.searchParams.set("refreshToken", refreshToken);
 
     return res.redirect(redirectUrl.toString());
   }

@@ -92,11 +92,19 @@ export class AuthService {
       expiresIn: "30d",
     });
 
-    // Хешуємо refreshToken перед збереженням
+    // Оновлюємо refreshToken тільки при генерації
     user.refreshToken = await bcrypt.hash(refreshToken, 10);
     await this.userRepo.save(user);
 
-    return { accessToken, refreshToken };
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      },
+    };
   }
 
   async validateUser(id: number) {
@@ -127,7 +135,7 @@ export class AuthService {
       secure: false,
       auth: {
         user: process.env.SMTP_USER!,
-        pass: process.env.SMTP_PASS!, 
+        pass: process.env.SMTP_PASS!,
       },
     });
 
