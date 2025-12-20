@@ -35,7 +35,7 @@ export class PaymentsService {
 
     if (!email) {
       console.warn('⚠️ No email in IPN');
-      return;
+      return; 
     }
 
     /**
