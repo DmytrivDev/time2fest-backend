@@ -1,5 +1,6 @@
-import { Controller, Post, Body, HttpCode } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, Req, UseGuards } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('payments')
 export class PaymentsController {
@@ -8,12 +9,14 @@ export class PaymentsController {
   @Post('ipn')
   @HttpCode(200)
   async handleIpn(@Body() payload: any) {
-    console.log('📥 [PAYPRO IPN] Incoming');
-    console.log('📦 Payload:', payload);
-
     await this.paymentsService.handlePayProIpn(payload);
-
-    // PayPro expects 200 OK
     return 'OK';
+  }
+
+  // 👇 ОЦЕ ТОГО БРАКУВАЛО
+  @UseGuards(JwtAuthGuard)
+  @Post('create-paypro-link')
+  async createPayProLink(@Req() req: any) {
+    return this.paymentsService.createPayProCheckout(req.user);
   }
 }
