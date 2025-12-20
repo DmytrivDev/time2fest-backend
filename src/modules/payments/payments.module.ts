@@ -10,3 +10,4 @@ import { PaymentsRepository } from './payments.repository';
   providers: [PaymentsService, PaymentsRepository],
 })
 export class PaymentsModule {}
+ 
