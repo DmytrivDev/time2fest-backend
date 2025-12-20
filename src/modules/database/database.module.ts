@@ -3,7 +3,7 @@ import { Pool } from "pg";
 
 @Global()
 @Module({
-  providers: [
+  providers: [ 
     {
       provide: Pool,
       useFactory: () => {
