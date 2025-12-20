@@ -1,45 +1,25 @@
-import { Body, Controller, Post, Req, Res, HttpCode } from '@nestjs/common';
+import { Controller, Post, Req, Res, HttpCode } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
-import { CreateCheckoutDto } from './dto/create-checkout.dto';
 
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
-  @Post('create-checkout')
-  async createCheckout(@Body() dto: CreateCheckoutDto) {
-    console.log("➡️ [API] /create-checkout called with:", dto.email);
-    const session = await this.paymentsService.createCheckout(dto.email);
-    return { url: session.url };
-  }
-
-  @Post('webhook')
+  // ✅ ТІЛЬКИ IPN
+  @Post('ipn')
   @HttpCode(200)
-  async handleWebhook(@Req() req: any, @Res() res: any) {
-    console.log("📥 [WEBHOOK] Incoming event");
+  async handleIpn(@Req() req: any, @Res() res: any) {
+    console.log('📥 [PAYPRO IPN] Incoming');
 
-    const rawBody = req.rawBody;
-    const signature = req.headers['paddle-signature'];
-    const timestamp = req.headers['paddle-timestamp'];
+    const payload = req.body;
+    console.log('📦 Payload:', payload);
 
-    console.log("🔐 Headers:", { signature, timestamp });
-
-    const isValid = this.paymentsService.verifyWebhookSignature(
-      rawBody,
-      signature,
-      timestamp,
-    );
-
-    if (!isValid) {
-      console.error("❌ Invalid signature");
-      return res.status(400).send("Invalid signature");
+    try {
+      await this.paymentsService.handlePayProIpn(payload);
+      return res.send('OK');
+    } catch (e) {
+      console.error('❌ IPN error:', e);
+      return res.status(400).send('ERROR');
     }
-
-    const event = JSON.parse(rawBody);
-    console.log("📦 Event payload:", event);
-
-    await this.paymentsService.handlePaddleEvent(event);
-    return res.send("OK");
   }
 }
- 
