@@ -2,27 +2,25 @@ import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { ValidationPipe } from "@nestjs/common";
 import morgan from "morgan";
-import * as express from "express";
+import * as bodyParser from "body-parser";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // --- CORS ---
   app.enableCors({
-    origin: ["http://localhost:3000", "https://time2fest.com"],
+    origin: ["https://time2fest.com"],
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   });
 
-  // 🚨 MUST HAVE for Paddle webhooks:
-  // Зберігаємо сирий body перед JSON парсингом
-  app.use(
-    express.json({
-      verify: (req: any, res, buf) => {
-        req.rawBody = buf.toString();
-      },
-    })
-  );
+  /**
+   * 🔑 PAYPRO IPN
+   * PayPro sends application/x-www-form-urlencoded
+   * This parser is MANDATORY
+   */
+  app.use(bodyParser.urlencoded({ extended: false }));
+  app.use(bodyParser.json());
 
   // --- Global prefix ---
   app.setGlobalPrefix("api");
@@ -30,11 +28,10 @@ async function bootstrap() {
   // --- Logging ---
   app.use(morgan("dev"));
 
-  // --- ValidationPipe ---
+  // --- Validation ---
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: true,
       transform: true,
     })
   );
