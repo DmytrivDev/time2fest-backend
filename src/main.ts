@@ -2,12 +2,11 @@ import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { ValidationPipe } from "@nestjs/common";
 import morgan from "morgan";
-import * as bodyParser from "body-parser";
+import * as express from "express";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // --- CORS ---
   app.enableCors({
     origin: ["https://time2fest.com"],
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
@@ -16,19 +15,16 @@ async function bootstrap() {
 
   /**
    * 🔑 PAYPRO IPN
-   * PayPro sends application/x-www-form-urlencoded
-   * This parser is MANDATORY
+   * This is CRITICAL
+   * PayPro sends multipart/form-data
    */
-  app.use(bodyParser.urlencoded({ extended: false }));
-  app.use(bodyParser.json());
+  app.use(express.urlencoded({ extended: true }));
+  app.use(express.json());
 
-  // --- Global prefix ---
   app.setGlobalPrefix("api");
 
-  // --- Logging ---
   app.use(morgan("dev"));
 
-  // --- Validation ---
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
