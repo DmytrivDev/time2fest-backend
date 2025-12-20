@@ -15,50 +15,60 @@ export class PaymentsService {
    * PAYPRO IPN
    * ===================================== */
   async handlePayProIpn(payload: any): Promise<void> {
-    console.log('📦 FULL IPN PAYLOAD:', JSON.stringify(payload, null, 2));
+    console.log("📦 FULL IPN PAYLOAD:", JSON.stringify(payload, null, 2));
+
     if (!payload || typeof payload !== "object") {
       return;
     }
 
-    const status = payload.payment_status || payload.order_status;
-    const email = payload.email || payload.customer_email || null;
-    const orderId = payload.order_id || payload.invoice_id;
+    const orderId: string | undefined = payload.ORDER_ID;
+    const email: string | undefined = payload.CUSTOMER_EMAIL;
+    const orderStatus: string | undefined = payload.ORDER_STATUS;
+    const ipnType: string | undefined = payload.IPN_TYPE_NAME;
 
     if (!orderId) {
+      console.warn("⚠️ IPN without ORDER_ID");
       return;
     }
 
     // 🔁 Deduplication
     if (await this.paymentsRepo.exists(orderId)) {
+      console.log("🔁 Duplicate IPN ignored:", orderId);
       return;
     }
 
+    const isSuccessful =
+      orderStatus === "Processed" &&
+      ipnType === "OrderCharged";
+
     // ❌ Not a successful payment
-    if (!this.isSuccessfulStatus(status)) {
-      await this.savePayment(orderId, 'ignored', email);
+    if (!isSuccessful) {
+      await this.savePayment(orderId, "ignored", email);
       return;
     }
 
     // ❌ Missing email
     if (!email) {
-      await this.savePayment(orderId, 'error');
+      await this.savePayment(orderId, "error");
       return;
     }
 
     // ❌ User not found
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      await this.savePayment(orderId, email, "error");
+      await this.savePayment(orderId, "error", email);
       return;
     }
 
     // ✅ Success
     await this.usersService.setPremium(email);
-    await this.savePayment(orderId, 'paid', email);
+    await this.savePayment(orderId, "paid", email);
+
+    console.log("🎉 Premium activated for:", email);
   }
 
   /* =====================================
-   * CHECKOUT (FRONTEND)
+   * CHECKOUT (FRONTEND ENTRY)
    * ===================================== */
   async createPayProCheckout(user: any): Promise<{ url: string }> {
     if (!user?.email) {
@@ -71,7 +81,6 @@ export class PaymentsService {
 
     const orderId = this.generateOrderId(user.id);
 
-    // ⚠️ Тут твоя реальна логіка створення PayPro purchase link
     const url = this.buildPayProPurchaseLink({
       orderId,
       email: user.email,
@@ -83,15 +92,11 @@ export class PaymentsService {
   /* =====================================
    * HELPERS
    * ===================================== */
-  private isSuccessfulStatus(status: string): boolean {
-    return ["approved", "paid", "completed"].includes(status);
-  }
-
   private async savePayment(
     orderId: string,
     status: PaymentStatus,
     email?: string
-  ) {
+  ): Promise<void> {
     await this.paymentsRepo.save({
       orderId,
       email,
@@ -103,23 +108,30 @@ export class PaymentsService {
     return `PREMIUM-${userId}-${Date.now()}`;
   }
 
+  /**
+   * Формує PayPro checkout URL + коректні return/cancel
+   * FRONTEND НІЧОГО НЕ ЗНАЄ ПРО PAYPRO
+   */
   private buildPayProPurchaseLink(data: {
     orderId: string;
     email: string;
   }): string {
-    /**
-     * ⚠️ Тут приклад.
-     * Ти або:
-     * 1) викликаєш PayPro API
-     * 2) або формуєш purchase link за їх схемою
-     */
-    const baseUrl = "https://paypro.example/checkout";
+    const PAYPRO_CHECKOUT_BASE =
+      "https://checkout.payproglobal.com/order"; // ⚠️ реальний домен PayPro
+
+    const FRONT_SUCCESS_URL =
+      "https://time2fest.com/profile/subscription/success";
+
+    const FRONT_CANCEL_URL =
+      "https://time2fest.com/profile/subscription/cancel";
 
     const params = new URLSearchParams({
       order_id: data.orderId,
-      email: data.email,
+      customer_email: data.email,
+      return_url: FRONT_SUCCESS_URL,
+      cancel_url: FRONT_CANCEL_URL,
     });
 
-    return `${baseUrl}?${params.toString()}`;
+    return `${PAYPRO_CHECKOUT_BASE}?${params.toString()}`;
   }
 }
