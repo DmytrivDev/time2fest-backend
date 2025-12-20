@@ -15,6 +15,7 @@ export class PaymentsService {
    * PAYPRO IPN
    * ===================================== */
   async handlePayProIpn(payload: any): Promise<void> {
+    console.log('📦 FULL IPN PAYLOAD:', JSON.stringify(payload, null, 2));
     if (!payload || typeof payload !== "object") {
       return;
     }
