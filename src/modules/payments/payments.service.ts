@@ -16,7 +16,7 @@ export class PaymentsService {
    * ===================================== */
   async handlePayProIpn(payload: any): Promise<void> {
     if (!payload || typeof payload !== "object") {
-      return;
+      return; 
     }
 
     const status = payload.payment_status || payload.order_status;
