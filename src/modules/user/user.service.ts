@@ -86,4 +86,14 @@ export class UserService {
 
     return { success: true };
   }
+
+  async findByEmail(email: string): Promise<User | null> {
+    if (!email) return null;
+
+    const user = await this.userRepository.findOne({
+      where: { email },
+    });
+
+    return user ?? null;
+  }
 }
