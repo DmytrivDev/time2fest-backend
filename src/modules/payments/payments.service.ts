@@ -60,36 +60,53 @@ export class PaymentsService {
    * ===================================== */
   private verifySignature(payload: any): boolean {
     const validationKey = process.env.PAYPRO_VALIDATION_KEY;
-
     if (!validationKey) {
       this.logger.error("PAYPRO_VALIDATION_KEY not set");
       return false;
     }
 
-    const { ORDER_ID, ORDER_STATUS, IPN_TYPE_NAME, CUSTOMER_EMAIL, SIGNATURE } =
-      payload;
+    const {
+      ORDER_ID,
+      ORDER_STATUS,
+      ORDER_TOTAL_AMOUNT,
+      CUSTOMER_EMAIL,
+      TEST_MODE,
+      IPN_TYPE_NAME,
+      SIGNATURE,
+    } = payload;
 
     if (
       !ORDER_ID ||
       !ORDER_STATUS ||
-      !IPN_TYPE_NAME ||
+      !ORDER_TOTAL_AMOUNT ||
       !CUSTOMER_EMAIL ||
+      TEST_MODE === undefined ||
+      !IPN_TYPE_NAME ||
       !SIGNATURE
     ) {
-      this.logger.error("Missing fields for signature verification");
+      this.logger.error("Missing fields required for signature verification");
       return false;
     }
 
+    // Формуємо рядок строго за специфікацією
     const sourceString =
-      ORDER_ID + ORDER_STATUS + IPN_TYPE_NAME + CUSTOMER_EMAIL + validationKey;
+      String(ORDER_ID) +
+      String(ORDER_STATUS) +
+      String(ORDER_TOTAL_AMOUNT) +
+      String(CUSTOMER_EMAIL) +
+      String(validationKey) +
+      String(TEST_MODE) +
+      String(IPN_TYPE_NAME);
 
-    const calculated = createHash("sha256").update(sourceString).digest("hex");
+    const calculatedHash = createHash("sha256")
+      .update(sourceString)
+      .digest("hex");
 
-    if (calculated !== SIGNATURE) {
+    if (calculatedHash !== SIGNATURE) {
       this.logger.error("Signature mismatch", {
         sourceString,
         received: SIGNATURE,
-        calculated,
+        calculated: calculatedHash,
       });
       return false;
     }
