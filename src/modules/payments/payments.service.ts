@@ -1,9 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { createHash } from "crypto";
 import { UserService } from "../user/user.service";
-import { PaymentsRepository } from "./payments.repository";
-
-export type PaymentStatus = "paid" | "error" | "ignored";
+import { PaymentsRepository, PaymentStatus } from "./payments.repository";
 
 @Injectable()
 export class PaymentsService {
@@ -19,47 +17,98 @@ export class PaymentsService {
    * ===================================== */
   async handlePayProIpn(payload: any): Promise<void> {
     this.logger.log("📦 PAYPRO IPN RECEIVED");
-    this.logger.debug(payload);
 
-    if (!payload || typeof payload !== "object") return;
+    if (!payload || typeof payload !== "object") {
+      return;
+    }
 
     if (!this.verifySignature(payload)) {
       this.logger.error("❌ Invalid PayPro signature");
       return;
     }
 
-    const { ORDER_ID, ORDER_STATUS, IPN_TYPE_NAME, CUSTOMER_EMAIL } = payload;
+    const context = this.buildContext(payload);
 
-    if (await this.paymentsRepo.exists(ORDER_ID)) {
-      this.logger.warn(`🔁 Duplicate IPN ignored: ${ORDER_ID}`);
+    if (await this.paymentsRepo.exists(context.orderId)) {
+      this.logger.warn(`🔁 Duplicate IPN ignored: ${context.orderId}`);
       return;
     }
 
-    const isSuccessful =
-      ORDER_STATUS === "Processed" && IPN_TYPE_NAME === "OrderCharged";
-
-    if (!isSuccessful) {
-      await this.savePayment(ORDER_ID, "ignored", CUSTOMER_EMAIL);
+    if (!context.isSuccessful) {
+      await this.save(context, "ignored");
       return;
     }
 
-    const user = await this.usersService.findByEmail(CUSTOMER_EMAIL);
-    if (!user) {
-      await this.savePayment(ORDER_ID, "error", CUSTOMER_EMAIL);
+    if (!context.userId || !context.internalOrderId) {
+      this.logger.error("❌ Missing userId or internalOrderId", context);
+      await this.save(context, "error");
       return;
     }
 
-    await this.usersService.setPremium(CUSTOMER_EMAIL);
-    await this.savePayment(ORDER_ID, "paid", CUSTOMER_EMAIL);
+    // 🔐 ЄДИНЕ МІСЦЕ активації Premium
+    await this.usersService.setPremiumById(context.userId);
 
-    this.logger.log(`🎉 Premium activated for ${CUSTOMER_EMAIL}`);
+    await this.save(context, "paid");
+
+    this.logger.log(
+      `🎉 Premium activated for userId=${context.userId} (${context.orderId})`
+    );
   }
 
   /* =====================================
-   * SIGNATURE VALIDATION (RAW BODY)
+   * CHECKOUT
+   * ===================================== */
+  async createPayProCheckout(userId: number): Promise<{ url: string }> {
+    const baseUrl = process.env.PAYPRO_PURCHASE_URL;
+
+    if (!baseUrl) {
+      throw new Error("PAYPRO_PURCHASE_URL is not configured");
+    }
+
+    const internalOrderId = `T2F-${Date.now()}-${userId}`;
+
+    const params = new URLSearchParams({
+      user_id: String(userId),
+      internal_order_id: internalOrderId,
+    });
+
+    return {
+      url: `${baseUrl}&${params.toString()}`,
+    };
+  }
+
+  /* =====================================
+   * CONTEXT
+   * ===================================== */
+  private buildContext(payload: any) {
+    const {
+      ORDER_ID,
+      ORDER_STATUS,
+      IPN_TYPE_NAME,
+      CHECKOUT_QUERY_STRING,
+      CUSTOMER_EMAIL,
+    } = payload;
+
+    const { userId, internalOrderId } = this.extractIdsFromCheckoutQuery(
+      CHECKOUT_QUERY_STRING
+    );
+
+    return {
+      orderId: ORDER_ID as string,
+      userId,
+      internalOrderId,
+      email: CUSTOMER_EMAIL as string | undefined,
+      isSuccessful:
+        ORDER_STATUS === "Processed" && IPN_TYPE_NAME === "OrderCharged",
+    };
+  }
+
+  /* =====================================
+   * SIGNATURE
    * ===================================== */
   private verifySignature(payload: any): boolean {
     const validationKey = process.env.PAYPRO_VALIDATION_KEY;
+
     if (!validationKey) {
       this.logger.error("PAYPRO_VALIDATION_KEY not set");
       return false;
@@ -84,11 +133,9 @@ export class PaymentsService {
       !IPN_TYPE_NAME ||
       !SIGNATURE
     ) {
-      this.logger.error("Missing fields required for signature verification");
       return false;
     }
 
-    // Формуємо рядок строго за специфікацією
     const sourceString =
       String(ORDER_ID) +
       String(ORDER_STATUS) +
@@ -102,39 +149,43 @@ export class PaymentsService {
       .update(sourceString)
       .digest("hex");
 
-    if (calculatedHash !== SIGNATURE) {
-      this.logger.error("Signature mismatch", {
-        sourceString,
-        received: SIGNATURE,
-        calculated: calculatedHash,
-      });
-      return false;
-    }
-
-    return true;
-  }
-
-  /* =====================================
-   * CHECKOUT
-   * ===================================== */
-  async createPayProCheckout(): Promise<{ url: string }> {
-    const url = process.env.PAYPRO_PURCHASE_URL;
-
-    if (!url) {
-      throw new Error("PAYPRO_PURCHASE_URL is not configured");
-    }
-
-    return { url };
+    return calculatedHash === SIGNATURE;
   }
 
   /* =====================================
    * HELPERS
    * ===================================== */
-  private async savePayment(
-    orderId: string,
-    status: PaymentStatus,
-    email?: string
-  ) {
-    await this.paymentsRepo.save({ orderId, email, status });
+  private extractIdsFromCheckoutQuery(query?: string) {
+    if (!query) {
+      return { userId: null, internalOrderId: null };
+    }
+
+    const params = new URLSearchParams(query);
+
+    const userId = params.get("user_id");
+    const internalOrderId = params.get("internal_order_id");
+
+    return {
+      userId: userId ? Number(userId) : null,
+      internalOrderId,
+    };
+  }
+
+  private async save(
+    context: {
+      orderId: string;
+      userId?: number | null;
+      internalOrderId?: string | null;
+      email?: string;
+    },
+    status: PaymentStatus
+  ): Promise<void> {
+    await this.paymentsRepo.save({
+      orderId: context.orderId,
+      userId: context.userId ?? undefined,
+      internalOrderId: context.internalOrderId ?? undefined,
+      email: context.email,
+      status,
+    });
   }
 }

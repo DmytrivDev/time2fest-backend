@@ -28,7 +28,9 @@ export class PaymentsController {
    */
   @UseGuards(JwtAuthGuard)
   @Post("create-paypro-link")
-  async createPayProLink() {
-    return this.paymentsService.createPayProCheckout();
+  async createPayProLink(@Req() req: any) {
+    const userId = req.user.id; // ← КЛЮЧОВЕ
+
+    return this.paymentsService.createPayProCheckout(userId);
   }
 }

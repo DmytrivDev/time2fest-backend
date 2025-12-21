@@ -17,16 +17,28 @@ export class UserService {
     private readonly userRepository: Repository<User>
   ) {}
 
-  // --- Оновлення профілю ---
-  async updateProfile(userId: number, dto: UpdateProfileDto) {
-    if (!userId) throw new NotFoundException("User not found");
+  /* =====================================
+   * PROFILE
+   * ===================================== */
 
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user) throw new NotFoundException("User not found");
+  async updateProfile(userId: number, dto: UpdateProfileDto) {
+    if (!userId) {
+      throw new NotFoundException("User not found");
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
 
     if (dto.name !== undefined) {
       const trimmed = dto.name.trim();
-      if (!trimmed) throw new BadRequestException("Name cannot be empty");
+      if (!trimmed) {
+        throw new BadRequestException("Name cannot be empty");
+      }
       user.name = trimmed;
     }
 
@@ -49,12 +61,22 @@ export class UserService {
     };
   }
 
-  // --- Зміна пароля ---
-  async changePassword(userId: number, dto: ChangePasswordDto) {
-    if (!userId) throw new NotFoundException("User not found");
+  /* =====================================
+   * PASSWORD
+   * ===================================== */
 
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user) throw new NotFoundException("User not found");
+  async changePassword(userId: number, dto: ChangePasswordDto) {
+    if (!userId) {
+      throw new NotFoundException("User not found");
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
 
     const isValid = await bcrypt.compare(dto.currentPassword, user.password);
     if (!isValid) {
@@ -72,23 +94,55 @@ export class UserService {
     };
   }
 
-  // 🔥 --- Встановлення Premium-статусу (викликається Paddle webhook) ---
-  async setPremium(email: string) {
-    const user = await this.userRepository.findOne({ where: { email } });
+  /* =====================================
+   * PREMIUM (EMAIL — legacy, Paddle)
+   * ===================================== */
+
+  /**
+   * ⚠️ Старий метод — лишаємо для Paddle / legacy логіки
+   * НЕ використовувати для PayPro
+   */
+  async setPremium(email: string): Promise<void> {
+    const user = await this.userRepository.findOne({
+      where: { email },
+    });
 
     if (!user) {
-      console.warn("Paddle webhook: user not found for email:", email);
+      console.warn("Premium activation: user not found for email:", email);
       return;
     }
 
     user.isPremium = true;
     await this.userRepository.save(user);
-
-    return { success: true };
   }
 
+  /* =====================================
+   * PREMIUM (USER ID — PayPro, правильний)
+   * ===================================== */
+
+  /**
+   * ✅ ЄДИНИЙ правильний метод для PayPro
+   * Викликається з PaymentsService
+   */
+  async setPremiumById(userId: number): Promise<void> {
+    const result = await this.userRepository.update(
+      { id: userId },
+      { isPremium: true }
+    );
+
+    if (!result.affected) {
+      throw new NotFoundException(`User not found (id=${userId})`);
+    }
+  }
+
+  /* =====================================
+   * HELPERS
+   * ===================================== */
+
   async findByEmail(email: string): Promise<User | null> {
-    if (!email) return null;
+    if (!email) {
+      return null;
+    }
 
     const user = await this.userRepository.findOne({
       where: { email },
