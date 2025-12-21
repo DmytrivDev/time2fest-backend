@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import * as crypto from "crypto";
 import { UserService } from "../user/user.service";
 import { PaymentsRepository } from "./payments.repository";
 
@@ -12,22 +13,39 @@ export class PaymentsService {
   ) {}
 
   /* =====================================
-   * PAYPRO IPN
+   * PAYPRO IPN HANDLER
    * ===================================== */
   async handlePayProIpn(payload: any): Promise<void> {
     console.log("📦 FULL IPN PAYLOAD:", JSON.stringify(payload, null, 2));
 
-    if (!payload || typeof payload !== "object") return;
+    if (!payload || typeof payload !== "object") {
+      console.warn("⚠️ Invalid IPN payload");
+      return;
+    }
 
-    const orderId = payload.ORDER_ID;
-    const email = payload.CUSTOMER_EMAIL;
-    const orderStatus = payload.ORDER_STATUS;
-    const ipnType = payload.IPN_TYPE_NAME;
+    // 🔐 IPN signature verification
+    if (!this.verifyPayProIpn(payload)) {
+      console.warn("❌ IPN signature verification failed");
+      return;
+    }
 
-    if (!orderId) return;
+    const orderId: string | undefined = payload.ORDER_ID;
+    const email: string | undefined = payload.CUSTOMER_EMAIL;
+    const orderStatus: string | undefined = payload.ORDER_STATUS;
+    const ipnType: string | undefined = payload.IPN_TYPE_NAME;
 
-    if (await this.paymentsRepo.exists(orderId)) return;
+    if (!orderId) {
+      console.warn("⚠️ IPN without ORDER_ID");
+      return;
+    }
 
+    // 🔁 Deduplication
+    if (await this.paymentsRepo.exists(orderId)) {
+      console.log("🔁 Duplicate IPN ignored:", orderId);
+      return;
+    }
+
+    // ✅ Successful payment definition
     const isSuccessful =
       orderStatus === "Processed" && ipnType === "OrderCharged";
 
@@ -47,6 +65,7 @@ export class PaymentsService {
       return;
     }
 
+    // 🎉 SUCCESS
     await this.usersService.setPremium(email);
     await this.savePayment(orderId, "paid", email);
 
@@ -54,7 +73,7 @@ export class PaymentsService {
   }
 
   /* =====================================
-   * CHECKOUT
+   * CHECKOUT (FRONTEND ENTRY)
    * ===================================== */
   async createPayProCheckout(): Promise<{ url: string }> {
     const url = process.env.PAYPRO_PURCHASE_URL;
@@ -67,13 +86,64 @@ export class PaymentsService {
   }
 
   /* =====================================
+   * IPN SIGNATURE VALIDATION
+   * ===================================== */
+  private verifyPayProIpn(payload: any): boolean {
+    const shouldVerify = process.env.PAYPRO_IPN_VERIFY === "true";
+
+    if (!shouldVerify) {
+      console.warn("⚠️ PAYPRO IPN verification disabled (DEV MODE)");
+      return true;
+    }
+
+    const validationKey = process.env.PAYPRO_VALIDATION_KEY;
+    if (!validationKey) {
+      console.error("❌ PAYPRO_VALIDATION_KEY is missing");
+      return false;
+    }
+
+    const receivedHash = payload.HASH;
+    if (!receivedHash) {
+      console.warn("❌ IPN without HASH");
+      return false;
+    }
+
+    // Формуємо строку з payload без HASH
+    const dataString = Object.keys(payload)
+      .filter((key) => key !== "HASH")
+      .sort()
+      .map((key) => String(payload[key]))
+      .join("");
+
+    const calculatedHash = crypto
+      .createHash("sha256")
+      .update(dataString + validationKey)
+      .digest("hex");
+
+    const isValid = calculatedHash === receivedHash;
+
+    if (!isValid) {
+      console.error("❌ Invalid PayPro IPN signature", {
+        receivedHash,
+        calculatedHash,
+      });
+    }
+
+    return isValid;
+  }
+
+  /* =====================================
    * HELPERS
    * ===================================== */
   private async savePayment(
     orderId: string,
     status: PaymentStatus,
     email?: string
-  ) {
-    await this.paymentsRepo.save({ orderId, email, status });
+  ): Promise<void> {
+    await this.paymentsRepo.save({
+      orderId,
+      email,
+      status,
+    });
   }
 }
