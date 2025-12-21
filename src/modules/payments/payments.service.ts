@@ -17,11 +17,17 @@ export class PaymentsService {
   /* =====================================
    * PAYPRO IPN
    * ===================================== */
-  async handlePayProIpn(payload: any): Promise<void> {
-    this.logger.log("📦 FULL IPN PAYLOAD");
+  async handlePayProIpn(
+    payload: any,
+    rawBody: string
+  ): Promise<void> {
+    this.logger.log("📦 PAYPRO IPN RECEIVED");
     this.logger.debug(payload);
 
-    if (!payload || typeof payload !== "object") return;
+    if (!payload || !rawBody) {
+      this.logger.error("Missing payload or rawBody");
+      return;
+    }
 
     const {
       ORDER_ID,
@@ -31,14 +37,14 @@ export class PaymentsService {
       SIGNATURE,
     } = payload;
 
-    if (!ORDER_ID) {
-      this.logger.warn("IPN without ORDER_ID");
+    if (!ORDER_ID || !SIGNATURE) {
+      this.logger.warn("IPN missing ORDER_ID or SIGNATURE");
       return;
     }
 
-    // 🔐 SIGNATURE VALIDATION
-    if (!this.verifySignature(payload)) {
-      this.logger.error("❌ IPN signature verification failed");
+    // 🔐 SIGNATURE VALIDATION (REAL PAYPRO LOGIC)
+    if (!this.verifySignature(rawBody, SIGNATURE)) {
+      this.logger.error("❌ Invalid PayPro signature");
       return;
     }
 
@@ -75,29 +81,23 @@ export class PaymentsService {
   }
 
   /* =====================================
-   * SIGNATURE VALIDATION
+   * SIGNATURE VALIDATION (RAW BODY)
    * ===================================== */
-  private verifySignature(payload: any): boolean {
+  private verifySignature(rawBody: string, received: string): boolean {
     const validationKey = process.env.PAYPRO_VALIDATION_KEY;
 
     if (!validationKey) {
-      this.logger.error("PAYPRO_VALIDATION_KEY is not configured");
+      this.logger.error("PAYPRO_VALIDATION_KEY not set");
       return false;
     }
 
-    const rawString =
-      payload.ORDER_ID +
-      payload.ORDER_STATUS +
-      payload.CUSTOMER_EMAIL +
-      validationKey;
-
     const calculated = createHash("sha256")
-      .update(rawString)
+      .update(rawBody + validationKey)
       .digest("hex");
 
-    if (calculated !== payload.SIGNATURE) {
-      this.logger.error("❌ Invalid PayPro IPN signature", {
-        received: payload.SIGNATURE,
+    if (calculated !== received) {
+      this.logger.error("Signature mismatch", {
+        received,
         calculated,
       });
       return false;
