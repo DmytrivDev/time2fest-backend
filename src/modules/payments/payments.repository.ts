@@ -8,49 +8,67 @@ export class PaymentsRepository {
   constructor(private readonly db: Pool) {}
 
   /* =====================================================
-   * CHECK DUPLICATE IPN
+   * CREATE PENDING PAYMENT (ON CHECKOUT)
    * ===================================================== */
-  async exists(orderId: string): Promise<boolean> {
+  async createPending(data: {
+    internalOrderId: string;
+    userId: number;
+    email: string;
+    lang: string;
+  }): Promise<void> {
+    await this.db.query(
+      `
+      INSERT INTO payments (
+        internal_order_id,
+        user_id,
+        email,
+        lang,
+        status
+      )
+      VALUES ($1, $2, $3, $4, 'pending')
+      ON CONFLICT (internal_order_id) DO NOTHING
+      `,
+      [data.internalOrderId, data.userId, data.email, data.lang]
+    );
+  }
+
+  /* =====================================================
+   * MARK PAYMENT AS PAID (IPN)
+   * ===================================================== */
+  async markPaid(
+    internalOrderId: string,
+    orderId: string,
+    email?: string
+  ): Promise<boolean> {
     const res = await this.db.query(
-      "SELECT 1 FROM payments WHERE order_id = $1 LIMIT 1",
-      [orderId]
+      `
+      UPDATE payments
+      SET
+        status = 'paid',
+        order_id = $1,
+        email = COALESCE($2, email)
+      WHERE internal_order_id = $3
+      `,
+      [orderId, email ?? null, internalOrderId]
     );
 
     return (res.rowCount ?? 0) > 0;
   }
 
   /* =====================================================
-   * SAVE PAYMENT (pending / paid / error / ignored)
+   * MARK PAYMENT AS ERROR / IGNORED
    * ===================================================== */
-  async save(data: {
-    orderId: string;
-    status: PaymentStatus;
-    userId?: number;
-    internalOrderId?: string;
-    email?: string;
-    lang?: string;
-  }): Promise<void> {
+  async markStatus(
+    internalOrderId: string,
+    status: Exclude<PaymentStatus, "paid" | "pending">
+  ): Promise<void> {
     await this.db.query(
       `
-    INSERT INTO payments (
-      order_id,
-      user_id,
-      internal_order_id,
-      email,
-      lang,
-      status
-    )
-    VALUES ($1, $2, $3, $4, $5, $6)
-    ON CONFLICT (order_id) DO NOTHING
-    `,
-      [
-        data.orderId,
-        data.userId ?? null,
-        data.internalOrderId ?? null,
-        data.email ?? null,
-        data.lang ?? null,
-        data.status,
-      ]
+      UPDATE payments
+      SET status = $1
+      WHERE internal_order_id = $2
+      `,
+      [status, internalOrderId]
     );
   }
 
@@ -65,7 +83,6 @@ export class PaymentsRepository {
       SELECT lang
       FROM payments
       WHERE internal_order_id = $1
-      ORDER BY created_at DESC
       LIMIT 1
       `,
       [internalOrderId]
