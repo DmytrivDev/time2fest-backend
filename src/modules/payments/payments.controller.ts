@@ -19,8 +19,7 @@ export class PaymentsController {
    * =====================================================
    * PAYPRO IPN (Webhook)
    * =====================================================
-   * PayPro → backend
-   * Активує Premium
+   * ЄДИНЕ місце, де активується Premium
    */
   @Post("ipn")
   @HttpCode(200)
@@ -31,16 +30,18 @@ export class PaymentsController {
 
   /**
    * =====================================================
-   * FRONTEND → CREATE PAYPRO CHECKOUT LINK
+   * CREATE PAYPRO CHECKOUT LINK
    * =====================================================
    * Авторизований юзер
+   * Передаємо lang з фронту
    */
   @Post("create-paypro-link")
   @UseGuards(JwtAuthGuard)
-  async createPayProLink(@Req() req: any) {
+  async createPayProLink(@Req() req: any, @Body("lang") lang: string) {
     return this.paymentsService.createPayProCheckout(
       req.user.id,
-      req.user.email
+      req.user.email,
+      lang
     );
   }
 
@@ -48,12 +49,20 @@ export class PaymentsController {
    * =====================================================
    * PAYPRO POST-REDIRECT HANDLER
    * =====================================================
-   * PayPro робить POST після успішної оплати
-   * Cloudflare пропускає POST тільки до backend
-   * Ми відповідаємо 302 → React page
+   * PayPro → POST
+   * Cloudflare → OK
+   * Backend → 302 на мовний success
    */
   @Post("return")
-  handlePayProReturn(@Res() res: Response) {
-    return res.redirect(302, "/profile/success");
+  async handlePayProReturn(@Req() req: any, @Res() res: Response) {
+    const internalOrderId = req.query.internal_order_id;
+
+    const lang = await this.paymentsService.getLangByInternalOrderId(
+      internalOrderId
+    );
+
+    const prefix = lang && lang !== "en" ? `/${lang}` : "";
+
+    return res.redirect(302, `${prefix}/profile/success`);
   }
 }

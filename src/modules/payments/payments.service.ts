@@ -12,20 +12,14 @@ export class PaymentsService {
     private readonly paymentsRepo: PaymentsRepository
   ) {}
 
-  /* =====================================
+  /* =====================================================
    * PAYPRO IPN
-   * ===================================== */
+   * ===================================================== */
   async handlePayProIpn(payload: any): Promise<void> {
     this.logger.log("📦 PAYPRO IPN RECEIVED");
 
-    if (!payload || typeof payload !== "object") {
-      return;
-    }
-
-    if (!this.verifySignature(payload)) {
-      this.logger.error("❌ Invalid PayPro signature");
-      return;
-    }
+    if (!payload || typeof payload !== "object") return;
+    if (!this.verifySignature(payload)) return;
 
     const context = this.buildContext(payload);
 
@@ -39,13 +33,12 @@ export class PaymentsService {
       return;
     }
 
-    if (!context.userId || !context.internalOrderId) {
-      this.logger.error("❌ Missing userId or internalOrderId", context);
+    if (!context.userId) {
       await this.save(context, "error");
       return;
     }
 
-    // 🔐 ЄДИНЕ МІСЦЕ активації Premium
+    // 🔐 ЄДИНЕ місце активації Premium
     await this.usersService.setPremiumById(context.userId);
 
     await this.save(context, "paid");
@@ -55,35 +48,54 @@ export class PaymentsService {
     );
   }
 
-  /* =====================================
-   * CHECKOUT
-   * ===================================== */
+  /* =====================================================
+   * CREATE CHECKOUT
+   * ===================================================== */
   async createPayProCheckout(
     userId: number,
-    email: string
+    email: string,
+    lang: string
   ): Promise<{ url: string }> {
     const baseUrl = process.env.PAYPRO_PURCHASE_URL;
-
-    if (!baseUrl) {
-      throw new Error("PAYPRO_PURCHASE_URL is not configured");
-    }
+    if (!baseUrl) throw new Error("PAYPRO_PURCHASE_URL not configured");
 
     const internalOrderId = `T2F-${Date.now()}-${userId}`;
+
+    // ⬇️ Зберігаємо pending платіж з мовою
+    await this.paymentsRepo.save({
+      orderId: internalOrderId,
+      userId,
+      internalOrderId,
+      email,
+      lang,
+      status: "pending",
+    });
 
     const params = new URLSearchParams({
       user_id: String(userId),
       internal_order_id: internalOrderId,
-      CUSTOMER_EMAIL: email, // ✅ префіл email у чекауті
+      CUSTOMER_EMAIL: email,
     });
 
-    return {
-      url: `${baseUrl}&${params.toString()}`,
-    };
+    return { url: `${baseUrl}&${params.toString()}` };
   }
 
-  /* =====================================
-   * CONTEXT
-   * ===================================== */
+  /* =====================================================
+   * LANG FOR REDIRECT
+   * ===================================================== */
+  async getLangByInternalOrderId(internalOrderId?: string): Promise<string> {
+    if (!internalOrderId) return "en";
+
+    const lang = await this.paymentsRepo.getLangByInternalOrderId(
+      internalOrderId
+    );
+
+    return lang || "en";
+  }
+
+  /* =====================================================
+   * HELPERS
+   * ===================================================== */
   private buildContext(payload: any) {
     const {
       ORDER_ID,
@@ -98,25 +110,28 @@ export class PaymentsService {
     );
 
     return {
-      orderId: ORDER_ID as string,
+      orderId: ORDER_ID,
       userId,
       internalOrderId,
-      email: CUSTOMER_EMAIL as string | undefined,
+      email: CUSTOMER_EMAIL,
       isSuccessful:
         ORDER_STATUS === "Processed" && IPN_TYPE_NAME === "OrderCharged",
     };
   }
 
-  /* =====================================
-   * SIGNATURE
-   * ===================================== */
+  private extractIdsFromCheckoutQuery(query?: string) {
+    if (!query) return { userId: null, internalOrderId: null };
+
+    const params = new URLSearchParams(query);
+    return {
+      userId: params.get("user_id") ? Number(params.get("user_id")) : null,
+      internalOrderId: params.get("internal_order_id"),
+    };
+  }
+
   private verifySignature(payload: any): boolean {
     const validationKey = process.env.PAYPRO_VALIDATION_KEY;
-
-    if (!validationKey) {
-      this.logger.error("PAYPRO_VALIDATION_KEY not set");
-      return false;
-    }
+    if (!validationKey) return false;
 
     const {
       ORDER_ID,
@@ -149,30 +164,8 @@ export class PaymentsService {
       String(TEST_MODE) +
       String(IPN_TYPE_NAME);
 
-    const calculatedHash = createHash("sha256")
-      .update(sourceString)
-      .digest("hex");
-
-    return calculatedHash === SIGNATURE;
-  }
-
-  /* =====================================
-   * HELPERS
-   * ===================================== */
-  private extractIdsFromCheckoutQuery(query?: string) {
-    if (!query) {
-      return { userId: null, internalOrderId: null };
-    }
-
-    const params = new URLSearchParams(query);
-
-    const userId = params.get("user_id");
-    const internalOrderId = params.get("internal_order_id");
-
-    return {
-      userId: userId ? Number(userId) : null,
-      internalOrderId,
-    };
+    const hash = createHash("sha256").update(sourceString).digest("hex");
+    return hash === SIGNATURE;
   }
 
   private async save(
@@ -181,14 +174,16 @@ export class PaymentsService {
       userId?: number | null;
       internalOrderId?: string | null;
       email?: string;
+      lang?: string;
     },
     status: PaymentStatus
-  ): Promise<void> {
+  ) {
     await this.paymentsRepo.save({
       orderId: context.orderId,
       userId: context.userId ?? undefined,
       internalOrderId: context.internalOrderId ?? undefined,
       email: context.email,
+      lang: context.lang,
       status,
     });
   }
