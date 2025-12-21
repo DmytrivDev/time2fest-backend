@@ -8,7 +8,7 @@ export class PaymentsRepository {
   constructor(private readonly db: Pool) {}
 
   /* =====================================================
-   * CREATE PENDING PAYMENT (ON CHECKOUT)
+   * CREATE PENDING PAYMENT (BEFORE REDIRECT)
    * ===================================================== */
   async createPending(data: {
     internalOrderId: string;
@@ -33,14 +33,14 @@ export class PaymentsRepository {
   }
 
   /* =====================================================
-   * MARK PAYMENT AS PAID (IPN)
+   * MARK PAYMENT AS PAID (FROM IPN)
    * ===================================================== */
-  async markPaid(
-    internalOrderId: string,
-    orderId: string,
-    email?: string
-  ): Promise<boolean> {
-    const res = await this.db.query(
+  async markPaid(params: {
+    internalOrderId: string;
+    orderId: string;
+    email?: string;
+  }): Promise<void> {
+    await this.db.query(
       `
       UPDATE payments
       SET
@@ -49,27 +49,19 @@ export class PaymentsRepository {
         email = COALESCE($2, email)
       WHERE internal_order_id = $3
       `,
-      [orderId, email ?? null, internalOrderId]
+      [params.orderId, params.email ?? null, params.internalOrderId]
     );
-
-    return (res.rowCount ?? 0) > 0;
   }
 
   /* =====================================================
-   * MARK PAYMENT AS ERROR / IGNORED
+   * CHECK DUPLICATE IPN
    * ===================================================== */
-  async markStatus(
-    internalOrderId: string,
-    status: Exclude<PaymentStatus, "paid" | "pending">
-  ): Promise<void> {
-    await this.db.query(
-      `
-      UPDATE payments
-      SET status = $1
-      WHERE internal_order_id = $2
-      `,
-      [status, internalOrderId]
+  async existsByOrderId(orderId: string): Promise<boolean> {
+    const res = await this.db.query(
+      `SELECT 1 FROM payments WHERE order_id = $1 LIMIT 1`,
+      [orderId]
     );
+    return (res.rowCount ?? 0) > 0;
   }
 
   /* =====================================================

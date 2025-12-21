@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { createHash } from "crypto";
 import { UserService } from "../user/user.service";
-import { PaymentsRepository, PaymentStatus } from "./payments.repository";
+import { PaymentsRepository } from "./payments.repository";
 
 @Injectable()
 export class PaymentsService {
@@ -13,43 +13,7 @@ export class PaymentsService {
   ) {}
 
   /* =====================================================
-   * PAYPRO IPN
-   * ===================================================== */
-  async handlePayProIpn(payload: any): Promise<void> {
-    this.logger.log("📦 PAYPRO IPN RECEIVED");
-
-    if (!payload || typeof payload !== "object") return;
-    if (!this.verifySignature(payload)) return;
-
-    const context = this.buildContext(payload);
-
-    if (await this.paymentsRepo.exists(context.orderId)) {
-      this.logger.warn(`🔁 Duplicate IPN ignored: ${context.orderId}`);
-      return;
-    }
-
-    if (!context.isSuccessful) {
-      await this.save(context, "ignored");
-      return;
-    }
-
-    if (!context.userId) {
-      await this.save(context, "error");
-      return;
-    }
-
-    // 🔐 ЄДИНЕ місце активації Premium
-    await this.usersService.setPremiumById(context.userId);
-
-    await this.save(context, "paid");
-
-    this.logger.log(
-      `🎉 Premium activated for userId=${context.userId} (${context.orderId})`
-    );
-  }
-
-  /* =====================================================
-   * CREATE CHECKOUT
+   * CREATE PAYPRO CHECKOUT
    * ===================================================== */
   async createPayProCheckout(
     userId: number,
@@ -62,15 +26,14 @@ export class PaymentsService {
     }
 
     const internalOrderId = `T2F-${Date.now()}-${userId}`;
+    const finalLang = lang || "en";
 
-    // ✅ 1. Зберігаємо pending ПЕРЕД редиректом
-    await this.paymentsRepo.save({
-      orderId: internalOrderId,
-      userId,
+    // ✅ 1. Створюємо PENDING
+    await this.paymentsRepo.createPending({
       internalOrderId,
+      userId,
       email,
-      lang: lang ?? "en", // 👈 важливо
-      status: "pending",
+      lang: finalLang,
     });
 
     // ✅ 2. Формуємо PayPro URL
@@ -85,22 +48,11 @@ export class PaymentsService {
   }
 
   /* =====================================================
-   * LANG FOR REDIRECT
+   * PAYPRO IPN
    * ===================================================== */
-  async getLangByInternalOrderId(internalOrderId?: string): Promise<string> {
-    if (!internalOrderId) return "en";
+  async handlePayProIpn(payload: any): Promise<void> {
+    if (!payload || !this.verifySignature(payload)) return;
 
-    const lang = await this.paymentsRepo.getLangByInternalOrderId(
-      internalOrderId
-    );
-
-    return lang || "en";
-  }
-
-  /* =====================================================
-   * HELPERS
-   * ===================================================== */
-  private buildContext(payload: any) {
     const {
       ORDER_ID,
       ORDER_STATUS,
@@ -109,30 +61,51 @@ export class PaymentsService {
       CUSTOMER_EMAIL,
     } = payload;
 
-    const { userId, internalOrderId } = this.extractIdsFromCheckoutQuery(
-      CHECKOUT_QUERY_STRING
-    );
+    if (await this.paymentsRepo.existsByOrderId(ORDER_ID)) {
+      this.logger.warn(`Duplicate IPN ignored: ${ORDER_ID}`);
+      return;
+    }
 
-    return {
-      orderId: ORDER_ID,
-      userId,
+    const params = new URLSearchParams(CHECKOUT_QUERY_STRING || "");
+    const internalOrderId = params.get("internal_order_id");
+    const userId = params.get("user_id") ? Number(params.get("user_id")) : null;
+
+    if (
+      ORDER_STATUS !== "Processed" ||
+      IPN_TYPE_NAME !== "OrderCharged" ||
+      !internalOrderId ||
+      !userId
+    ) {
+      return;
+    }
+
+    // 🔐 ЄДИНЕ місце активації Premium
+    await this.usersService.setPremiumById(userId);
+
+    await this.paymentsRepo.markPaid({
       internalOrderId,
+      orderId: ORDER_ID,
       email: CUSTOMER_EMAIL,
-      isSuccessful:
-        ORDER_STATUS === "Processed" && IPN_TYPE_NAME === "OrderCharged",
-    };
+    });
+
+    this.logger.log(`Premium activated for user ${userId}`);
   }
 
-  private extractIdsFromCheckoutQuery(query?: string) {
-    if (!query) return { userId: null, internalOrderId: null };
+  /* =====================================================
+   * LANG FOR REDIRECT
+   * ===================================================== */
+  async getLangByInternalOrderId(internalOrderId?: string): Promise<string> {
+    if (!internalOrderId) return "en";
 
-    const params = new URLSearchParams(query);
-    return {
-      userId: params.get("user_id") ? Number(params.get("user_id")) : null,
-      internalOrderId: params.get("internal_order_id"),
-    };
+    return (
+      (await this.paymentsRepo.getLangByInternalOrderId(internalOrderId)) ||
+      "en"
+    );
   }
 
+  /* =====================================================
+   * SIGNATURE CHECK
+   * ===================================================== */
   private verifySignature(payload: any): boolean {
     const validationKey = process.env.PAYPRO_VALIDATION_KEY;
     if (!validationKey) return false;
@@ -147,48 +120,17 @@ export class PaymentsService {
       SIGNATURE,
     } = payload;
 
-    if (
-      !ORDER_ID ||
-      !ORDER_STATUS ||
-      !ORDER_TOTAL_AMOUNT ||
-      !CUSTOMER_EMAIL ||
-      TEST_MODE === undefined ||
-      !IPN_TYPE_NAME ||
-      !SIGNATURE
-    ) {
-      return false;
-    }
-
     const sourceString =
-      String(ORDER_ID) +
-      String(ORDER_STATUS) +
-      String(ORDER_TOTAL_AMOUNT) +
-      String(CUSTOMER_EMAIL) +
-      String(validationKey) +
-      String(TEST_MODE) +
-      String(IPN_TYPE_NAME);
+      ORDER_ID +
+      ORDER_STATUS +
+      ORDER_TOTAL_AMOUNT +
+      CUSTOMER_EMAIL +
+      validationKey +
+      TEST_MODE +
+      IPN_TYPE_NAME;
 
     const hash = createHash("sha256").update(sourceString).digest("hex");
-    return hash === SIGNATURE;
-  }
 
-  private async save(
-    context: {
-      orderId: string;
-      userId?: number | null;
-      internalOrderId?: string | null;
-      email?: string;
-      lang?: string;
-    },
-    status: PaymentStatus
-  ) {
-    await this.paymentsRepo.save({
-      orderId: context.orderId,
-      userId: context.userId ?? undefined,
-      internalOrderId: context.internalOrderId ?? undefined,
-      email: context.email,
-      lang: context.lang,
-      status,
-    });
+    return hash === SIGNATURE;
   }
 }
