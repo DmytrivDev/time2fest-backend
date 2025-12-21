@@ -4,8 +4,10 @@ import {
   Body,
   HttpCode,
   Req,
+  Res,
   UseGuards,
 } from "@nestjs/common";
+import { Response } from "express";
 import { PaymentsService } from "./payments.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 
@@ -14,7 +16,11 @@ export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   /**
-   * PAYPRO IPN
+   * =====================================================
+   * PAYPRO IPN (Webhook)
+   * =====================================================
+   * PayPro → backend
+   * Активує Premium
    */
   @Post("ipn")
   @HttpCode(200)
@@ -24,7 +30,10 @@ export class PaymentsController {
   }
 
   /**
-   * FRONTEND CHECKOUT
+   * =====================================================
+   * FRONTEND → CREATE PAYPRO CHECKOUT LINK
+   * =====================================================
+   * Авторизований юзер
    */
   @Post("create-paypro-link")
   @UseGuards(JwtAuthGuard)
@@ -33,5 +42,18 @@ export class PaymentsController {
       req.user.id,
       req.user.email
     );
+  }
+
+  /**
+   * =====================================================
+   * PAYPRO POST-REDIRECT HANDLER
+   * =====================================================
+   * PayPro робить POST після успішної оплати
+   * Cloudflare пропускає POST тільки до backend
+   * Ми відповідаємо 302 → React page
+   */
+  @Post("return")
+  handlePayProReturn(@Res() res: Response) {
+    return res.redirect(302, "/profile/success");
   }
 }
