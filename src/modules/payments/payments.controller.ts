@@ -18,8 +18,8 @@ export class PaymentsController {
    */
   @Post("ipn")
   @HttpCode(200)
-  async handleIpn(@Req() req: any, @Body() payload: any) {
-    await this.paymentsService.handlePayProIpn(payload, req.rawBody);
+  async handleIpn(@Body() payload: any) {
+    await this.paymentsService.handlePayProIpn(payload);
     return "OK";
   }
 
