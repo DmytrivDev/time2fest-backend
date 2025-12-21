@@ -17,54 +17,29 @@ export class PaymentsService {
   /* =====================================
    * PAYPRO IPN
    * ===================================== */
-  async handlePayProIpn(
-    payload: any,
-    rawBody: string
-  ): Promise<void> {
+  async handlePayProIpn(payload: any): Promise<void> {
     this.logger.log("📦 PAYPRO IPN RECEIVED");
     this.logger.debug(payload);
 
-    if (!payload || !rawBody) {
-      this.logger.error("Missing payload or rawBody");
-      return;
-    }
+    if (!payload || typeof payload !== "object") return;
 
-    const {
-      ORDER_ID,
-      ORDER_STATUS,
-      CUSTOMER_EMAIL,
-      IPN_TYPE_NAME,
-      SIGNATURE,
-    } = payload;
-
-    if (!ORDER_ID || !SIGNATURE) {
-      this.logger.warn("IPN missing ORDER_ID or SIGNATURE");
-      return;
-    }
-
-    // 🔐 SIGNATURE VALIDATION (REAL PAYPRO LOGIC)
-    if (!this.verifySignature(rawBody, SIGNATURE)) {
+    if (!this.verifySignature(payload)) {
       this.logger.error("❌ Invalid PayPro signature");
       return;
     }
 
-    // 🔁 Deduplication
+    const { ORDER_ID, ORDER_STATUS, IPN_TYPE_NAME, CUSTOMER_EMAIL } = payload;
+
     if (await this.paymentsRepo.exists(ORDER_ID)) {
       this.logger.warn(`🔁 Duplicate IPN ignored: ${ORDER_ID}`);
       return;
     }
 
     const isSuccessful =
-      ORDER_STATUS === "Processed" &&
-      IPN_TYPE_NAME === "OrderCharged";
+      ORDER_STATUS === "Processed" && IPN_TYPE_NAME === "OrderCharged";
 
     if (!isSuccessful) {
       await this.savePayment(ORDER_ID, "ignored", CUSTOMER_EMAIL);
-      return;
-    }
-
-    if (!CUSTOMER_EMAIL) {
-      await this.savePayment(ORDER_ID, "error");
       return;
     }
 
@@ -83,7 +58,7 @@ export class PaymentsService {
   /* =====================================
    * SIGNATURE VALIDATION (RAW BODY)
    * ===================================== */
-  private verifySignature(rawBody: string, received: string): boolean {
+  private verifySignature(payload: any): boolean {
     const validationKey = process.env.PAYPRO_VALIDATION_KEY;
 
     if (!validationKey) {
@@ -91,13 +66,29 @@ export class PaymentsService {
       return false;
     }
 
-    const calculated = createHash("sha256")
-      .update(rawBody + validationKey)
-      .digest("hex");
+    const { ORDER_ID, ORDER_STATUS, IPN_TYPE_NAME, CUSTOMER_EMAIL, SIGNATURE } =
+      payload;
 
-    if (calculated !== received) {
+    if (
+      !ORDER_ID ||
+      !ORDER_STATUS ||
+      !IPN_TYPE_NAME ||
+      !CUSTOMER_EMAIL ||
+      !SIGNATURE
+    ) {
+      this.logger.error("Missing fields for signature verification");
+      return false;
+    }
+
+    const sourceString =
+      ORDER_ID + ORDER_STATUS + IPN_TYPE_NAME + CUSTOMER_EMAIL + validationKey;
+
+    const calculated = createHash("sha256").update(sourceString).digest("hex");
+
+    if (calculated !== SIGNATURE) {
       this.logger.error("Signature mismatch", {
-        received,
+        sourceString,
+        received: SIGNATURE,
         calculated,
       });
       return false;
