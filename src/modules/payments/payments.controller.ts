@@ -26,11 +26,12 @@ export class PaymentsController {
   /**
    * FRONTEND CHECKOUT
    */
-  @UseGuards(JwtAuthGuard)
   @Post("create-paypro-link")
+  @UseGuards(JwtAuthGuard)
   async createPayProLink(@Req() req: any) {
-    const userId = req.user.id; // ← КЛЮЧОВЕ
-
-    return this.paymentsService.createPayProCheckout(userId);
+    return this.paymentsService.createPayProCheckout(
+      req.user.id,
+      req.user.email
+    );
   }
 }

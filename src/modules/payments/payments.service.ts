@@ -58,7 +58,10 @@ export class PaymentsService {
   /* =====================================
    * CHECKOUT
    * ===================================== */
-  async createPayProCheckout(userId: number): Promise<{ url: string }> {
+  async createPayProCheckout(
+    userId: number,
+    email: string
+  ): Promise<{ url: string }> {
     const baseUrl = process.env.PAYPRO_PURCHASE_URL;
 
     if (!baseUrl) {
@@ -70,6 +73,7 @@ export class PaymentsService {
     const params = new URLSearchParams({
       user_id: String(userId),
       internal_order_id: internalOrderId,
+      CUSTOMER_EMAIL: email, // ✅ префіл email у чекауті
     });
 
     return {
