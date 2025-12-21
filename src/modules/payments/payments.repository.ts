@@ -38,26 +38,28 @@ export class PaymentsRepository {
   }
 
   /* ============================================
-   * MARK AS PAID (FROM IPN)
+   * FINALIZE PAYMENT (paid / error / ignored)
    * ============================================ */
-  async markPaid(data: {
+  async finalize(data: {
     internalOrderId: string;
-    orderId: string;
+    status: PaymentStatus;
+    orderId?: string;
     email?: string;
   }): Promise<void> {
     await this.db.query(
       `
       UPDATE payments
       SET
-        status = 'paid',
-        order_id = $1,
-        email = COALESCE($2, email)
-      WHERE internal_order_id = $3
+        status = $2,
+        order_id = COALESCE($3, order_id),
+        email = COALESCE($4, email)
+      WHERE internal_order_id = $1
       `,
       [
-        data.orderId,
-        data.email ?? null,
         data.internalOrderId,
+        data.status,
+        data.orderId ?? null,
+        data.email ?? null,
       ]
     );
   }

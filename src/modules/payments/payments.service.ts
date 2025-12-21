@@ -28,7 +28,7 @@ export class PaymentsService {
 
     const internalOrderId = `T2F-${Date.now()}-${userId}`;
 
-    // ✅ 1. Створюємо pending (ОДИН раз)
+    // ✅ 1. Створюємо ОДИН pending
     await this.paymentsRepo.createPending({
       internalOrderId,
       userId,
@@ -49,24 +49,92 @@ export class PaymentsService {
   }
 
   /* =====================================================
-   * PAYPRO IPN
+   * PAYPRO IPN (WEBHOOK)
    * ===================================================== */
-  async handlePayProIpn(payload: any) {
-    const orderId = String(payload.order_id);
-    const internalOrderId = payload.internal_order_id;
-    const email = payload.customer_email;
+  async handlePayProIpn(payload: any): Promise<void> {
+    if (!payload) return;
 
-    if (!internalOrderId || !orderId) {
+    // 🔐 Перевірка підпису
+    if (!this.verifySignature(payload)) {
+      this.logger.warn("Invalid PayPro signature");
       return;
     }
 
-    await this.paymentsRepo.markPaid({
+    const {
+      ORDER_ID,
+      ORDER_STATUS,
+      IPN_TYPE_NAME,
+      CHECKOUT_QUERY_STRING,
+      CUSTOMER_EMAIL,
+    } = payload;
+
+    if (!CHECKOUT_QUERY_STRING) {
+      this.logger.warn("Missing CHECKOUT_QUERY_STRING");
+      return;
+    }
+
+    const params = new URLSearchParams(CHECKOUT_QUERY_STRING);
+    const internalOrderId = params.get("internal_order_id");
+    const userId = params.get("user_id") ? Number(params.get("user_id")) : null;
+
+    if (!internalOrderId) {
+      this.logger.warn("Missing internal_order_id");
+      return;
+    }
+
+    /* =================================================
+     * SUCCESS PAYMENT
+     * ================================================= */
+    if (
+      ORDER_STATUS === "Processed" &&
+      IPN_TYPE_NAME === "OrderCharged" &&
+      userId
+    ) {
+      // ✅ 1. Оновлюємо payment → paid
+      await this.paymentsRepo.finalize({
+        internalOrderId,
+        status: "paid",
+        orderId: ORDER_ID,
+        email: CUSTOMER_EMAIL,
+      });
+
+      // 🔐 2. ЄДИНЕ місце активації Premium
+      await this.usersService.setPremiumById(userId);
+
+      this.logger.log(
+        `🎉 Premium activated for userId=${userId} (${ORDER_ID})`
+      );
+      return;
+    }
+
+    /* =================================================
+     * FAILED / DECLINED PAYMENT
+     * ================================================= */
+    if (ORDER_STATUS === "Declined" || ORDER_STATUS === "Failed") {
+      await this.paymentsRepo.finalize({
+        internalOrderId,
+        status: "error",
+        orderId: ORDER_ID,
+        email: CUSTOMER_EMAIL,
+      });
+
+      this.logger.warn(
+        `❌ Payment failed for internalOrderId=${internalOrderId}`
+      );
+      return;
+    }
+
+    /* =================================================
+     * EVERYTHING ELSE → ignored
+     * ================================================= */
+    await this.paymentsRepo.finalize({
       internalOrderId,
-      orderId,
-      email,
+      status: "ignored",
     });
 
-    // тут активація Premium
+    this.logger.warn(
+      `⚠️ Payment ignored: ${internalOrderId} (${ORDER_STATUS})`
+    );
   }
 
   /* =====================================================
