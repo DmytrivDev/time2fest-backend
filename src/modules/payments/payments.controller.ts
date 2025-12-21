@@ -38,6 +38,8 @@ export class PaymentsController {
   @Post("create-paypro-link")
   @UseGuards(JwtAuthGuard)
   async createPayProLink(@Req() req: any, @Body("lang") lang: string) {
+    console.log("🔥 LANG FROM FRONT:", lang);
+
     return this.paymentsService.createPayProCheckout(
       req.user.id,
       req.user.email,

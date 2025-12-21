@@ -54,30 +54,34 @@ export class PaymentsService {
   async createPayProCheckout(
     userId: number,
     email: string,
-    lang: string
+    lang?: string
   ): Promise<{ url: string }> {
     const baseUrl = process.env.PAYPRO_PURCHASE_URL;
-    if (!baseUrl) throw new Error("PAYPRO_PURCHASE_URL not configured");
+    if (!baseUrl) {
+      throw new Error("PAYPRO_PURCHASE_URL is not configured");
+    }
 
     const internalOrderId = `T2F-${Date.now()}-${userId}`;
 
-    // ⬇️ Зберігаємо pending платіж з мовою
+    // ✅ 1. Зберігаємо pending ПЕРЕД редиректом
     await this.paymentsRepo.save({
       orderId: internalOrderId,
       userId,
       internalOrderId,
       email,
-      lang,
+      lang: lang ?? "en", // 👈 важливо
       status: "pending",
     });
 
+    // ✅ 2. Формуємо PayPro URL
     const params = new URLSearchParams({
-      user_id: String(userId),
       internal_order_id: internalOrderId,
-      CUSTOMER_EMAIL: email,
+      user_id: String(userId),
     });
 
-    return { url: `${baseUrl}&${params.toString()}` };
+    return {
+      url: `${baseUrl}&${params.toString()}`,
+    };
   }
 
   /* =====================================================

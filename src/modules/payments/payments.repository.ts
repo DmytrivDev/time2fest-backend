@@ -32,17 +32,17 @@ export class PaymentsRepository {
   }): Promise<void> {
     await this.db.query(
       `
-      INSERT INTO payments (
-        order_id,
-        user_id,
-        internal_order_id,
-        email,
-        lang,
-        status
-      )
-      VALUES ($1, $2, $3, $4, $5, $6)
-      ON CONFLICT (order_id) DO NOTHING
-      `,
+    INSERT INTO payments (
+      order_id,
+      user_id,
+      internal_order_id,
+      email,
+      lang,
+      status
+    )
+    VALUES ($1, $2, $3, $4, $5, $6)
+    ON CONFLICT (order_id) DO NOTHING
+    `,
       [
         data.orderId,
         data.userId ?? null,
