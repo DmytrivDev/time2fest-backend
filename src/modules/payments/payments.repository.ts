@@ -7,9 +7,9 @@ export type PaymentStatus = "pending" | "paid" | "error" | "ignored";
 export class PaymentsRepository {
   constructor(private readonly db: Pool) {}
 
-  /* =====================================================
-   * CREATE PENDING PAYMENT (BEFORE REDIRECT)
-   * ===================================================== */
+  /* ============================================
+   * CREATE PENDING (ONE ROW PER CHECKOUT)
+   * ============================================ */
   async createPending(data: {
     internalOrderId: string;
     userId: number;
@@ -28,14 +28,19 @@ export class PaymentsRepository {
       VALUES ($1, $2, $3, $4, 'pending')
       ON CONFLICT (internal_order_id) DO NOTHING
       `,
-      [data.internalOrderId, data.userId, data.email, data.lang]
+      [
+        data.internalOrderId,
+        data.userId,
+        data.email,
+        data.lang,
+      ]
     );
   }
 
-  /* =====================================================
-   * MARK PAYMENT AS PAID (FROM IPN)
-   * ===================================================== */
-  async markPaid(params: {
+  /* ============================================
+   * MARK AS PAID (FROM IPN)
+   * ============================================ */
+  async markPaid(data: {
     internalOrderId: string;
     orderId: string;
     email?: string;
@@ -49,24 +54,17 @@ export class PaymentsRepository {
         email = COALESCE($2, email)
       WHERE internal_order_id = $3
       `,
-      [params.orderId, params.email ?? null, params.internalOrderId]
+      [
+        data.orderId,
+        data.email ?? null,
+        data.internalOrderId,
+      ]
     );
   }
 
-  /* =====================================================
-   * CHECK DUPLICATE IPN
-   * ===================================================== */
-  async existsByOrderId(orderId: string): Promise<boolean> {
-    const res = await this.db.query(
-      `SELECT 1 FROM payments WHERE order_id = $1 LIMIT 1`,
-      [orderId]
-    );
-    return (res.rowCount ?? 0) > 0;
-  }
-
-  /* =====================================================
+  /* ============================================
    * GET LANG FOR REDIRECT
-   * ===================================================== */
+   * ============================================ */
   async getLangByInternalOrderId(
     internalOrderId: string
   ): Promise<string | null> {

@@ -21,25 +21,26 @@ export class PaymentsService {
     lang?: string
   ): Promise<{ url: string }> {
     const baseUrl = process.env.PAYPRO_PURCHASE_URL;
+
     if (!baseUrl) {
       throw new Error("PAYPRO_PURCHASE_URL is not configured");
     }
 
     const internalOrderId = `T2F-${Date.now()}-${userId}`;
-    const finalLang = lang || "en";
 
-    // ✅ 1. Створюємо PENDING
+    // ✅ 1. Створюємо pending (ОДИН раз)
     await this.paymentsRepo.createPending({
       internalOrderId,
       userId,
       email,
-      lang: finalLang,
+      lang: lang && lang !== "en" ? lang : "en",
     });
 
     // ✅ 2. Формуємо PayPro URL
     const params = new URLSearchParams({
       internal_order_id: internalOrderId,
       user_id: String(userId),
+      CUSTOMER_EMAIL: email,
     });
 
     return {
@@ -50,45 +51,22 @@ export class PaymentsService {
   /* =====================================================
    * PAYPRO IPN
    * ===================================================== */
-  async handlePayProIpn(payload: any): Promise<void> {
-    if (!payload || !this.verifySignature(payload)) return;
+  async handlePayProIpn(payload: any) {
+    const orderId = String(payload.order_id);
+    const internalOrderId = payload.internal_order_id;
+    const email = payload.customer_email;
 
-    const {
-      ORDER_ID,
-      ORDER_STATUS,
-      IPN_TYPE_NAME,
-      CHECKOUT_QUERY_STRING,
-      CUSTOMER_EMAIL,
-    } = payload;
-
-    if (await this.paymentsRepo.existsByOrderId(ORDER_ID)) {
-      this.logger.warn(`Duplicate IPN ignored: ${ORDER_ID}`);
+    if (!internalOrderId || !orderId) {
       return;
     }
-
-    const params = new URLSearchParams(CHECKOUT_QUERY_STRING || "");
-    const internalOrderId = params.get("internal_order_id");
-    const userId = params.get("user_id") ? Number(params.get("user_id")) : null;
-
-    if (
-      ORDER_STATUS !== "Processed" ||
-      IPN_TYPE_NAME !== "OrderCharged" ||
-      !internalOrderId ||
-      !userId
-    ) {
-      return;
-    }
-
-    // 🔐 ЄДИНЕ місце активації Premium
-    await this.usersService.setPremiumById(userId);
 
     await this.paymentsRepo.markPaid({
       internalOrderId,
-      orderId: ORDER_ID,
-      email: CUSTOMER_EMAIL,
+      orderId,
+      email,
     });
 
-    this.logger.log(`Premium activated for user ${userId}`);
+    // тут активація Premium
   }
 
   /* =====================================================
