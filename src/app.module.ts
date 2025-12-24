@@ -26,6 +26,7 @@ import { UserModule  } from './modules/user/user.module';
 import { ProfilePageModule  } from './modules/profile-page/profile-page.module';
 import { PaymentsModule  } from './modules/payments/payments.module';
 import { DatabaseModule  } from './modules/database/database.module';
+import { OrderModule  } from './modules/order/order.module';
  
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { DatabaseModule  } from './modules/database/database.module';
     ProfilePageModule,
     PaymentsModule,
     DatabaseModule,
+    OrderModule,
   ],
 })
 export class AppModule {}
