@@ -42,7 +42,7 @@ export class AuthController {
   // 🔹 НОВЕ! /auth/me (саме це хоче фронтенд)
   @UseGuards(JwtAuthGuard)
   @Get("me")
-  getMe(@Req() req: any) {
+  getMe(@Req() req: any) { 
     const { password, refreshToken, ...safeUser } = req.user;
     return safeUser;
   }

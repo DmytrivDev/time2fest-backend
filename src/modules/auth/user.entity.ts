@@ -20,6 +20,9 @@ export class User {
   @Column({ nullable: true })
   name?: string;
 
+  @Column({ type: "boolean", default: false })
+  isPremium?: boolean;
+
   @Column({ nullable: true })
   refreshToken?: string;
 
