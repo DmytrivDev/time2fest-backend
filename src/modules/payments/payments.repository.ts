@@ -8,7 +8,7 @@ export class PaymentsRepository {
   constructor(private readonly db: Pool) {}
 
   /* ============================================
-   * CREATE PENDING (ONE ROW PER CHECKOUT)
+   * CREATE PENDING
    * ============================================ */
   async createPending(data: {
     internalOrderId: string;
@@ -33,13 +33,14 @@ export class PaymentsRepository {
   }
 
   /* ============================================
-   * FINALIZE PAYMENT (paid / error / ignored)
+   * FINALIZE PAYMENT
    * ============================================ */
   async finalize(data: {
     internalOrderId: string;
     status: PaymentStatus;
     orderId?: string;
     email?: string;
+    invoiceLink?: string;
   }): Promise<void> {
     await this.db.query(
       `
@@ -47,7 +48,8 @@ export class PaymentsRepository {
       SET
         status = $2,
         order_id = COALESCE($3, order_id),
-        email = COALESCE($4, email)
+        email = COALESCE($4, email),
+        invoice_link = COALESCE($5, invoice_link)
       WHERE internal_order_id = $1
       `,
       [
@@ -55,6 +57,7 @@ export class PaymentsRepository {
         data.status,
         data.orderId ?? null,
         data.email ?? null,
+        data.invoiceLink ?? null,
       ]
     );
   }

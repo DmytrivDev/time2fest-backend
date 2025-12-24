@@ -13,42 +13,6 @@ export class PaymentsService {
   ) {}
 
   /* =====================================================
-   * CREATE PAYPRO CHECKOUT
-   * ===================================================== */
-  async createPayProCheckout(
-    userId: number,
-    email: string,
-    lang?: string
-  ): Promise<{ url: string }> {
-    const baseUrl = process.env.PAYPRO_PURCHASE_URL;
-
-    if (!baseUrl) {
-      throw new Error("PAYPRO_PURCHASE_URL is not configured");
-    }
-
-    const internalOrderId = `T2F-${Date.now()}-${userId}`;
-
-    // ✅ 1. Створюємо ОДИН pending
-    await this.paymentsRepo.createPending({
-      internalOrderId,
-      userId,
-      email,
-      lang: lang && lang !== "en" ? lang : "en",
-    });
-
-    // ✅ 2. Формуємо PayPro URL
-    const params = new URLSearchParams({
-      internal_order_id: internalOrderId,
-      user_id: String(userId),
-      CUSTOMER_EMAIL: email,
-    });
-
-    return {
-      url: `${baseUrl}&${params.toString()}`,
-    };
-  }
-
-  /* =====================================================
    * PAYPRO IPN (WEBHOOK)
    * ===================================================== */
   async handlePayProIpn(payload: any): Promise<void> {
@@ -65,6 +29,7 @@ export class PaymentsService {
       IPN_TYPE_NAME,
       CHECKOUT_QUERY_STRING,
       CUSTOMER_EMAIL,
+      INVOICE_LINK,
     } = payload;
 
     if (!CHECKOUT_QUERY_STRING) return;
@@ -75,18 +40,19 @@ export class PaymentsService {
 
     if (!internalOrderId) return;
 
-    // 🔒 0. Дістаємо поточний статус
     const payment = await this.paymentsRepo.findByInternalOrderId(
       internalOrderId
     );
 
-    // 🔒 1. Якщо ВЖЕ paid — НІЧОГО НЕ РОБИМО
+    // 🔒 Якщо вже paid — нічого не робимо
     if (payment?.status === "paid") {
       this.logger.log(`🔁 IPN ignored (already paid): ${internalOrderId}`);
       return;
     }
 
-    // ✅ 2. ЄДИНА ТОЧКА АКТИВАЦІЇ PREMIUM
+    /* ===============================
+     * SUCCESS
+     * =============================== */
     if (
       ORDER_STATUS === "Processed" &&
       IPN_TYPE_NAME === "OrderCharged" &&
@@ -97,6 +63,7 @@ export class PaymentsService {
         status: "paid",
         orderId: ORDER_ID,
         email: CUSTOMER_EMAIL,
+        invoiceLink: INVOICE_LINK,
       });
 
       await this.usersService.setPremiumById(userId);
@@ -107,32 +74,25 @@ export class PaymentsService {
       return;
     }
 
-    // ❌ 3. Failed / Declined
+    /* ===============================
+     * FAILED
+     * =============================== */
     if (ORDER_STATUS === "Declined" || ORDER_STATUS === "Failed") {
       await this.paymentsRepo.finalize({
         internalOrderId,
         status: "error",
         orderId: ORDER_ID,
         email: CUSTOMER_EMAIL,
+        invoiceLink: INVOICE_LINK,
       });
+
+      this.logger.warn(`❌ Payment failed: ${internalOrderId}`);
       return;
     }
 
-    // ⚠️ 4. ВСЕ ІНШЕ — ПРОСТО ЛОГ
+    // ⚠️ ВСЕ ІНШЕ — лише лог
     this.logger.warn(
       `ℹ️ IPN ignored (non-final): ${internalOrderId} (${ORDER_STATUS})`
-    );
-  }
-
-  /* =====================================================
-   * LANG FOR REDIRECT
-   * ===================================================== */
-  async getLangByInternalOrderId(internalOrderId?: string): Promise<string> {
-    if (!internalOrderId) return "en";
-
-    return (
-      (await this.paymentsRepo.getLangByInternalOrderId(internalOrderId)) ||
-      "en"
     );
   }
 
