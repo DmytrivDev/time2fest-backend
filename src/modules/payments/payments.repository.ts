@@ -82,4 +82,4 @@ export class PaymentsRepository {
 
     return res.rows[0]?.lang ?? null;
   }
-} 
+}
