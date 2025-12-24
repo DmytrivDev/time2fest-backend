@@ -35,7 +35,7 @@ export class AuthService {
 
     const token = this.jwtService.sign({ id: user.id, email: user.email });
 
-    return { id: user.id, email: user.email, name: user.name, token };
+    return { id: user.id, email: user.email, name: user.name, isPremium: user.isPremium, token };
   }
 
   async login(dto: LoginDto) {
@@ -49,7 +49,7 @@ export class AuthService {
 
     const token = this.jwtService.sign({ id: user.id, email: user.email });
 
-    return { id: user.id, email: user.email, name: user.name, token };
+    return { id: user.id, email: user.email, name: user.name, isPremium: user.isPremium, token };
   }
 
   async socialLogin(data: { provider: string; email: string; name?: string }) {
@@ -68,7 +68,7 @@ export class AuthService {
     }
 
     const token = this.jwtService.sign({ id: user.id, email: user.email });
-    return { id: user.id, email: user.email, name: user.name, token };
+    return { id: user.id, email: user.email, name: user.name, isPremium: user.isPremium, token };
   }
 
   async validateToken(token: string) {
