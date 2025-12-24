@@ -28,12 +28,7 @@ export class PaymentsRepository {
       VALUES ($1, $2, $3, $4, 'pending')
       ON CONFLICT (internal_order_id) DO NOTHING
       `,
-      [
-        data.internalOrderId,
-        data.userId,
-        data.email,
-        data.lang,
-      ]
+      [data.internalOrderId, data.userId, data.email, data.lang]
     );
   }
 
@@ -62,6 +57,14 @@ export class PaymentsRepository {
         data.email ?? null,
       ]
     );
+  }
+
+  async findByInternalOrderId(internalOrderId: string) {
+    const res = await this.db.query(
+      `SELECT * FROM payments WHERE internal_order_id = $1 LIMIT 1`,
+      [internalOrderId]
+    );
+    return res.rows[0] ?? null;
   }
 
   /* ============================================

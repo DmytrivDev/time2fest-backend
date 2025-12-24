@@ -54,7 +54,6 @@ export class PaymentsService {
   async handlePayProIpn(payload: any): Promise<void> {
     if (!payload) return;
 
-    // 🔐 Перевірка підпису
     if (!this.verifySignature(payload)) {
       this.logger.warn("Invalid PayPro signature");
       return;
@@ -68,29 +67,31 @@ export class PaymentsService {
       CUSTOMER_EMAIL,
     } = payload;
 
-    if (!CHECKOUT_QUERY_STRING) {
-      this.logger.warn("Missing CHECKOUT_QUERY_STRING");
-      return;
-    }
+    if (!CHECKOUT_QUERY_STRING) return;
 
     const params = new URLSearchParams(CHECKOUT_QUERY_STRING);
     const internalOrderId = params.get("internal_order_id");
     const userId = params.get("user_id") ? Number(params.get("user_id")) : null;
 
-    if (!internalOrderId) {
-      this.logger.warn("Missing internal_order_id");
+    if (!internalOrderId) return;
+
+    // 🔒 0. Дістаємо поточний статус
+    const payment = await this.paymentsRepo.findByInternalOrderId(
+      internalOrderId
+    );
+
+    // 🔒 1. Якщо ВЖЕ paid — НІЧОГО НЕ РОБИМО
+    if (payment?.status === "paid") {
+      this.logger.log(`🔁 IPN ignored (already paid): ${internalOrderId}`);
       return;
     }
 
-    /* =================================================
-     * SUCCESS PAYMENT
-     * ================================================= */
+    // ✅ 2. ЄДИНА ТОЧКА АКТИВАЦІЇ PREMIUM
     if (
       ORDER_STATUS === "Processed" &&
       IPN_TYPE_NAME === "OrderCharged" &&
       userId
     ) {
-      // ✅ 1. Оновлюємо payment → paid
       await this.paymentsRepo.finalize({
         internalOrderId,
         status: "paid",
@@ -98,7 +99,6 @@ export class PaymentsService {
         email: CUSTOMER_EMAIL,
       });
 
-      // 🔐 2. ЄДИНЕ місце активації Premium
       await this.usersService.setPremiumById(userId);
 
       this.logger.log(
@@ -107,9 +107,7 @@ export class PaymentsService {
       return;
     }
 
-    /* =================================================
-     * FAILED / DECLINED PAYMENT
-     * ================================================= */
+    // ❌ 3. Failed / Declined
     if (ORDER_STATUS === "Declined" || ORDER_STATUS === "Failed") {
       await this.paymentsRepo.finalize({
         internalOrderId,
@@ -117,23 +115,12 @@ export class PaymentsService {
         orderId: ORDER_ID,
         email: CUSTOMER_EMAIL,
       });
-
-      this.logger.warn(
-        `❌ Payment failed for internalOrderId=${internalOrderId}`
-      );
       return;
     }
 
-    /* =================================================
-     * EVERYTHING ELSE → ignored
-     * ================================================= */
-    await this.paymentsRepo.finalize({
-      internalOrderId,
-      status: "ignored",
-    });
-
+    // ⚠️ 4. ВСЕ ІНШЕ — ПРОСТО ЛОГ
     this.logger.warn(
-      `⚠️ Payment ignored: ${internalOrderId} (${ORDER_STATUS})`
+      `ℹ️ IPN ignored (non-final): ${internalOrderId} (${ORDER_STATUS})`
     );
   }
 
