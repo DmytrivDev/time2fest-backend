@@ -27,6 +27,7 @@ import { ProfilePageModule  } from './modules/profile-page/profile-page.module';
 import { PaymentsModule  } from './modules/payments/payments.module';
 import { DatabaseModule  } from './modules/database/database.module';
 import { OrderModule  } from './modules/order/order.module';
+import { TranslationsModule  } from './modules/translations/translations.module';
  
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { OrderModule  } from './modules/order/order.module';
     PaymentsModule,
     DatabaseModule,
     OrderModule,
+    TranslationsModule,
   ],
 })
 export class AppModule {}
