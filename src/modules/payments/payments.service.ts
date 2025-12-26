@@ -260,7 +260,7 @@ export class PaymentsService {
       .digest("hex");
 
     this.logger.log("Signature debug:");
-    this.logger.log({
+    this.logger.log({ 
       sourceString,
       calculatedHash,
       receivedSignature: SIGNATURE,
