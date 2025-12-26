@@ -59,36 +59,41 @@ export class PaymentsService {
     const {
       ORDER_ID,
       ORDER_STATUS,
-      IPN_TYPE_NAME,
       CHECKOUT_QUERY_STRING,
       CUSTOMER_EMAIL,
       INVOICE_LINK,
     } = payload;
 
-    if (!CHECKOUT_QUERY_STRING) return;
+    if (!CHECKOUT_QUERY_STRING) {
+      this.logger.warn("IPN without CHECKOUT_QUERY_STRING");
+      return;
+    }
 
     const params = new URLSearchParams(CHECKOUT_QUERY_STRING);
     const internalOrderId = params.get("internal_order_id");
-    const userId = params.get("user_id") ? Number(params.get("user_id")) : null;
 
-    if (!internalOrderId) return;
+    if (!internalOrderId) {
+      this.logger.warn("IPN without internal_order_id");
+      return;
+    }
 
     const payment = await this.paymentsRepo.findByInternalOrderId(
       internalOrderId
     );
 
-    // 🔒 already paid → do nothing
-    if (payment?.status === "paid") {
+    if (!payment) {
+      this.logger.warn(`Payment not found: ${internalOrderId}`);
+      return;
+    }
+
+    // 🔒 already finalized
+    if (payment.status === "paid") {
       this.logger.log(`🔁 IPN ignored (already paid): ${internalOrderId}`);
       return;
     }
 
-    // ✅ SUCCESS
-    if (
-      ORDER_STATUS === "Processed" &&
-      IPN_TYPE_NAME === "OrderCharged" &&
-      userId
-    ) {
+    // ✅ SUCCESS (будь-який фінальний статус)
+    if (ORDER_STATUS === "Processed" || ORDER_STATUS === "Completed") {
       await this.paymentsRepo.finalize({
         internalOrderId,
         status: "paid",
@@ -97,10 +102,10 @@ export class PaymentsService {
         invoiceLink: INVOICE_LINK,
       });
 
-      await this.usersService.setPremiumById(userId);
+      await this.usersService.setPremiumById(payment.user_id);
 
       this.logger.log(
-        `🎉 Premium activated for userId=${userId} (${ORDER_ID})`
+        `🎉 Premium activated for userId=${payment.user_id} (${ORDER_ID})`
       );
       return;
     }
@@ -117,9 +122,9 @@ export class PaymentsService {
       return;
     }
 
-    // ⚠️ everything else → log only
-    this.logger.warn(
-      `ℹ️ IPN ignored (non-final): ${internalOrderId} (${ORDER_STATUS})`
+    // ℹ️ everything else
+    this.logger.log(
+      `ℹ️ IPN received (ignored): ${internalOrderId} (${ORDER_STATUS})`
     );
   }
 
