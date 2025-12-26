@@ -41,7 +41,7 @@ export class PaymentsService {
       lang: lang && lang !== "en" ? lang : "en",
     });
 
-    this.logger.log("Pending payment saved to DB");
+    this.logger.log("Pending payment inserted into DB");
 
     const params = new URLSearchParams({
       internal_order_id: internalOrderId,
@@ -66,16 +66,16 @@ export class PaymentsService {
       return;
     }
 
-    // 1️⃣ Raw payload
+    // 1. RAW PAYLOAD
     this.logger.log("IPN RAW PAYLOAD:");
     this.logger.log(JSON.stringify(payload, null, 2));
 
-    // 2️⃣ Signature verification
+    // 2. SIGNATURE CHECK
     const signatureValid = this.verifySignature(payload);
     this.logger.log(`Signature valid = ${signatureValid}`);
 
     if (!signatureValid) {
-      this.logger.warn("⚠️ PayPro SIGNATURE INVALID");
+      this.logger.warn("⚠️ Invalid PayPro SIGNATURE");
     }
 
     const {
@@ -101,7 +101,7 @@ export class PaymentsService {
       CHECKOUT_QUERY_STRING,
     });
 
-    // 3️⃣ CHECKOUT_QUERY_STRING
+    // 3. CHECKOUT_QUERY_STRING
     if (!CHECKOUT_QUERY_STRING) {
       this.logger.warn("❌ CHECKOUT_QUERY_STRING is missing");
       return;
@@ -115,7 +115,7 @@ export class PaymentsService {
     this.logger.log({
       internalOrderId,
       userIdParam,
-      parsedParams: Object.fromEntries(params.entries()),
+      allParams: Object.fromEntries(params.entries()),
     });
 
     if (!internalOrderId) {
@@ -123,26 +123,26 @@ export class PaymentsService {
       return;
     }
 
-    // 4️⃣ Payment from DB
+    // 4. FETCH PAYMENT FROM DB
     const payment = await this.paymentsRepo.findByInternalOrderId(
       internalOrderId
     );
 
-    this.logger.log("Payment from DB:");
+    this.logger.log("Payment fetched from DB:");
     this.logger.log(payment);
 
     if (!payment) {
-      this.logger.warn(`❌ Payment NOT FOUND in DB: ${internalOrderId}`);
+      this.logger.warn(`❌ Payment NOT FOUND: ${internalOrderId}`);
       return;
     }
 
-    // 5️⃣ Already paid?
+    // 5. ALREADY PAID?
     if (payment.status === "paid") {
-      this.logger.log(`🔁 Payment already PAID: ${internalOrderId}`);
+      this.logger.log(`🔁 Already PAID, skipping: ${internalOrderId}`);
       return;
     }
 
-    // 6️⃣ SUCCESS CASE
+    // 6. SUCCESS CASE
     if (
       ORDER_STATUS === "Processed" &&
       IPN_TYPE_NAME === "OrderCharged" &&
@@ -163,7 +163,7 @@ export class PaymentsService {
         invoiceLink: INVOICE_LINK,
       });
 
-      this.logger.log("Payment finalized in DB");
+      this.logger.log("Payment marked as PAID in DB");
 
       await this.usersService.setPremiumById(Number(userIdParam));
 
@@ -173,7 +173,7 @@ export class PaymentsService {
       return;
     }
 
-    // 7️⃣ FAILED CASE
+    // 7. FAILED CASE
     if (ORDER_STATUS === "Declined" || ORDER_STATUS === "Failed") {
       this.logger.warn("❌ PAYMENT FAILED");
       this.logger.log({ ORDER_STATUS });
@@ -190,13 +190,39 @@ export class PaymentsService {
       return;
     }
 
-    // 8️⃣ Everything else
+    // 8. EVERYTHING ELSE
     this.logger.warn("ℹ️ IPN IGNORED (non-final state)");
     this.logger.log({
       internalOrderId,
       ORDER_STATUS,
       IPN_TYPE_NAME,
     });
+  }
+
+  /* =====================================================
+   * LANG FOR REDIRECT
+   * ===================================================== */
+  async getLangByInternalOrderId(internalOrderId?: string): Promise<string> {
+    this.logger.log("=== GET LANG BY INTERNAL ORDER ID ===");
+    this.logger.log({ internalOrderId });
+
+    if (!internalOrderId) {
+      this.logger.warn("No internalOrderId provided, fallback to 'en'");
+      return "en";
+    }
+
+    const lang = await this.paymentsRepo.getLangByInternalOrderId(
+      internalOrderId
+    );
+
+    this.logger.log("Lang fetched from DB:");
+    this.logger.log({ internalOrderId, lang });
+
+    if (!lang) {
+      this.logger.warn(`Lang NOT FOUND for internalOrderId=${internalOrderId}`);
+    }
+
+    return lang || "en";
   }
 
   /* =====================================================
@@ -229,15 +255,17 @@ export class PaymentsService {
       TEST_MODE +
       IPN_TYPE_NAME;
 
-    const hash = createHash("sha256").update(sourceString).digest("hex");
+    const calculatedHash = createHash("sha256")
+      .update(sourceString)
+      .digest("hex");
 
     this.logger.log("Signature debug:");
     this.logger.log({
       sourceString,
-      calculatedHash: hash,
+      calculatedHash,
       receivedSignature: SIGNATURE,
     });
 
-    return hash === SIGNATURE;
+    return calculatedHash === SIGNATURE;
   }
 }
