@@ -28,6 +28,7 @@ import { PaymentsModule  } from './modules/payments/payments.module';
 import { DatabaseModule  } from './modules/database/database.module';
 import { OrderModule  } from './modules/order/order.module';
 import { TranslationsModule  } from './modules/translations/translations.module'; 
+import { UsersListModule  } from './modules/users-list/users-list.module'; 
  
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { TranslationsModule  } from './modules/translations/translations.module'
     DatabaseModule,
     OrderModule,
     TranslationsModule,
+    UsersListModule,
   ],
 })
 export class AppModule {}
