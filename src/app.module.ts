@@ -29,7 +29,7 @@ import { DatabaseModule  } from './modules/database/database.module';
 import { OrderModule  } from './modules/order/order.module';
 import { TranslationsModule  } from './modules/translations/translations.module'; 
 import { UsersListModule  } from './modules/users-list/users-list.module'; 
-import { LiveModule  } from './modules/live/live.module'; 
+import { MuxWebhookModule  } from './webhooks/mux/mux.module';
  
 @Module({
   imports: [
@@ -63,7 +63,7 @@ import { LiveModule  } from './modules/live/live.module';
     OrderModule,
     TranslationsModule,
     UsersListModule,
-    LiveModule,
+    MuxWebhookModule,
   ],
 })
 export class AppModule {}
