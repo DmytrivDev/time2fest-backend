@@ -10,24 +10,28 @@ export class MuxWebhookService {
 
     switch (event.type) {
       case "video.asset.created":
-        return this.onAssetCreated(event);
+        await this.onAssetCreated(event);
+        break;
 
       case "video.live_stream.connected":
-        return this.onLiveConnected(event);
+        await this.onLiveConnected(event);
+        break;
 
       case "video.live_stream.idle":
-        return this.onLiveEnded(event);
+        await this.onLiveEnded(event);
+        break;
 
       case "video.asset.live_stream_completed":
-        return this.onAssetCompleted(event);
+        await this.onAssetCompleted(event);
+        break;
 
       default:
-        return;
+        break;
     }
   }
 
   /**
-   * ▶ Asset створено — вперше зʼявляється playback_id
+   * ▶ Asset створено — зʼявляється playback_id
    */
   private async onAssetCreated(event: any) {
     const liveStreamId = event.data?.live_stream_id;
@@ -71,7 +75,7 @@ export class MuxWebhookService {
   }
 
   /**
-   * 🎬 Запис готовий
+   * 🎬 Запис повністю готовий
    */
   private async onAssetCompleted(event: any) {
     const liveStreamId = event.data?.live_stream_id;
@@ -92,6 +96,7 @@ export class MuxWebhookService {
     muxLiveStreamId: string,
     data: Record<string, any>
   ) {
+    // 1️⃣ Знаходимо live-stream по mux_live_stream_id
     const result = await this.strapi.get<any[]>(
       `/live-streams?filters[mux_live_stream_id][$eq]=${muxLiveStreamId}`,
       undefined,
@@ -107,12 +112,12 @@ export class MuxWebhookService {
       return;
     }
 
-    await axios.put(
-      getStrapiUrl(`/live-streams/${stream.documentId}`),
-      { data },
-      { headers: getStrapiHeaders() }
-    );
+    // 2️⃣ Оновлюємо ЧЕРЕЗ documentId (Strapi v4!)
+    await this.strapi.put(`/live-streams/${stream.documentId}`, {
+      data,
+    });
 
+    // 3️⃣ Чистимо кеш
     this.strapi.clearCache("live-streams");
   }
 }
