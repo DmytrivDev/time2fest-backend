@@ -10,7 +10,7 @@ export class MuxWebhookService {
 
     switch (event.type) {
       case "video.asset.created":
-        return this.onAssetCreated(event);
+        return this.onAssetCreated(event); 
 
       case "video.live_stream.connected":
         return this.onLiveConnected(event);
