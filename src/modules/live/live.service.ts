@@ -16,82 +16,67 @@ export class LiveService {
   ) {}
 
   async getLive(slug: string) {
-    console.log("▶ [LiveService] getLive", { slug });
-
     const live = await this.repo.findBySlug(slug);
-    if (!live) {
-      console.warn("❌ [LiveService] Live not found", { slug });
-      throw new NotFoundException("Live not found");
-    }
-
+    if (!live) throw new NotFoundException("Live not found");
     return live;
   }
 
   async startLive(slug: string) {
-    console.log("▶ [LiveService] startLive called", { slug });
-
     const live = await this.repo.findBySlug(slug);
-    if (!live) {
-      console.warn("❌ [LiveService] Live not found", { slug });
-      throw new NotFoundException("Live not found");
-    }
-
-    console.log("▶ [LiveService] Live loaded", {
-      id: live.id,
-      trstatus: live.trstatus,
-      muxLiveStreamId: live.muxLiveStreamId,
-    });
+    if (!live) throw new NotFoundException("Live not found");
 
     if (live.trstatus !== "prestart") {
-      console.warn("❌ [LiveService] Invalid status", {
-        expected: "prestart",
-        actual: live.trstatus,
-      });
       throw new BadRequestException("Live already started or ended");
     }
 
-    let ingest;
-    try {
-      ingest = await this.mux.createWebrtcIngest(
-        live.muxLiveStreamId
-      );
-    } catch (e) {
-      console.error("❌ [LiveService] Failed to create Mux ingest");
-      throw new InternalServerErrorException(
-        "Failed to create Mux ingest"
+    let muxWebrtcLiveId = live.muxWebrtcLiveId;
+    let playbackId = live.playbackId;
+
+    // 1️⃣ якщо ще не створений WebRTC Live — створюємо
+    if (!muxWebrtcLiveId || !playbackId) {
+      const created = await this.mux.createWebrtcLive();
+
+      muxWebrtcLiveId = created.liveId;
+      playbackId = created.playbackId;
+
+      await this.repo.saveMuxData(
+        live.id,
+        muxWebrtcLiveId,
+        playbackId
       );
     }
 
+    // 2️⃣ створюємо ingest
+    let ingest;
+    try {
+      ingest = await this.mux.createWebrtcIngest(
+        muxWebrtcLiveId
+      );
+    } catch (e) {
+      throw new InternalServerErrorException(
+        "Failed to create WebRTC ingest"
+      );
+    }
+
+    // 3️⃣ міняємо статус
     await this.repo.updateStatus(live.id, "process");
-    console.log("✅ [LiveService] Live status updated to process", {
-      liveId: live.id,
-    });
 
     return {
       ingestUrl: ingest.ingestUrl,
       token: ingest.token,
+      playbackId,
     };
   }
 
   async endLive(slug: string) {
-    console.log("▶ [LiveService] endLive called", { slug });
-
     const live = await this.repo.findBySlug(slug);
-    if (!live) {
-      console.warn("❌ [LiveService] Live not found", { slug });
-      throw new NotFoundException("Live not found");
-    }
+    if (!live) throw new NotFoundException("Live not found");
 
     if (live.trstatus !== "process") {
-      console.warn("❌ [LiveService] Live not active", {
-        trstatus: live.trstatus,
-      });
       throw new BadRequestException("Live not active");
     }
 
     await this.repo.updateStatus(live.id, "end");
-    console.log("✅ [LiveService] Live ended", { liveId: live.id });
-
     return { ok: true };
   }
 }

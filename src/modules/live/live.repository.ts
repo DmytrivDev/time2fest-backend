@@ -13,16 +13,46 @@ export class LiveRepository {
       true
     );
 
-    return Array.isArray(res) && res.length ? res[0] : null;
+    if (!Array.isArray(res) || !res.length) return null;
+
+    const live = res[0];
+
+    return {
+      id: live.id,
+      slug: live.slug,
+      trstatus: live.trstatus,
+      muxWebrtcLiveId: live.muxWebrtcLiveId,
+      playbackId: live.playbackId,
+    };
   }
 
-  async updateStatus(id: number, trstatus: "prestart" | "process" | "end") {
+  async updateStatus(
+    id: number,
+    trstatus: "prestart" | "process" | "end"
+  ) {
     await this.strapi.post(
       `/live-streams/${id}`,
       { data: { trstatus } }
     );
 
-    // 🔥 критично
+    this.strapi.clearCache();
+  }
+
+  async saveMuxData(
+    id: number,
+    muxWebrtcLiveId: string,
+    playbackId: string
+  ) {
+    await this.strapi.post(
+      `/live-streams/${id}`,
+      {
+        data: {
+          muxWebrtcLiveId,
+          playbackId,
+        },
+      }
+    );
+
     this.strapi.clearCache();
   }
 }
