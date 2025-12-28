@@ -6,6 +6,8 @@ export class MuxWebhookService {
   constructor(private readonly strapi: StrapiService) {}
 
   async handleEvent(event: any) {
+    console.log("🔔 MUX WEBHOOK:", event.type);
+
     switch (event.type) {
       case "video.asset.created":
         return this.onAssetCreated(event);
@@ -25,23 +27,24 @@ export class MuxWebhookService {
   }
 
   /**
-   * ▶ asset створено — отримуємо playback_id
+   * ▶ Asset створено — тут вперше є playback_id
    */
   private async onAssetCreated(event: any) {
     const liveStreamId = event.data?.live_stream_id;
     const assetId = event.data?.id;
     const playbackId = event.data?.playback_ids?.[0]?.id;
 
-    if (!liveStreamId || !playbackId) return;
+    if (!liveStreamId || !assetId || !playbackId) return;
 
     await this.updateLiveStream(liveStreamId, {
       active_asset_id: assetId,
       mux_playback_id: playbackId,
+      trstatus: "process",
     });
   }
 
   /**
-   * ▶ live реально стартував
+   * ▶ Live реально підʼєднався
    */
   private async onLiveConnected(event: any) {
     const liveStreamId = event.data?.id;
@@ -51,12 +54,12 @@ export class MuxWebhookService {
 
     await this.updateLiveStream(liveStreamId, {
       trstatus: "process",
-      active_asset_id: assetId,
+      ...(assetId ? { active_asset_id: assetId } : {}),
     });
   }
 
   /**
-   * ⏹ live завершився
+   * ⏹ Live зупинився
    */
   private async onLiveEnded(event: any) {
     const liveStreamId = event.data?.id;
@@ -68,7 +71,7 @@ export class MuxWebhookService {
   }
 
   /**
-   * 🎬 фінальний asset готовий
+   * 🎬 Запис завершено
    */
   private async onAssetCompleted(event: any) {
     const liveStreamId = event.data?.live_stream_id;
@@ -78,11 +81,12 @@ export class MuxWebhookService {
 
     await this.updateLiveStream(liveStreamId, {
       mux_playback_id: playbackId,
+      trstatus: "ended",
     });
   }
 
   /**
-   * 🔁 update LiveStream у Strapi по mux_live_stream_id
+   * 🔁 Оновлення LiveStream у Strapi по mux_live_stream_id
    */
   private async updateLiveStream(
     muxLiveStreamId: string,
@@ -95,17 +99,21 @@ export class MuxWebhookService {
       false
     );
 
-    const streams = Array.isArray(result) ? result : [];
-    const stream = streams[0];
+    const stream = Array.isArray(result) ? result[0] : null;
 
-    if (!stream?.id) return;
+    if (!stream?.id) {
+      console.warn(
+        `⚠ LiveStream not found for mux_live_stream_id=${muxLiveStreamId}`
+      );
+      return;
+    }
 
-    // 2️⃣ оновити
-    await this.strapi.post(`/live-streams/${stream.id}`, {
+    // 2️⃣ UPDATE через POST + _method=PUT (Strapi v4)
+    await this.strapi.post(`/live-streams/${stream.id}?_method=PUT`, {
       data,
     });
 
-    // 3️⃣ очистити кеш (опціонально)
+    // 3️⃣ очистити кеш
     this.strapi.clearCache("live-streams");
   }
 }
