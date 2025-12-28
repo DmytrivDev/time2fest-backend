@@ -30,6 +30,7 @@ import { OrderModule  } from './modules/order/order.module';
 import { TranslationsModule  } from './modules/translations/translations.module'; 
 import { UsersListModule  } from './modules/users-list/users-list.module'; 
 import { MuxWebhookModule  } from './webhooks/mux/mux.module';
+import { LiveModule  } from './modules/live/live.module';
  
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { MuxWebhookModule  } from './webhooks/mux/mux.module';
     TranslationsModule,
     UsersListModule,
     MuxWebhookModule,
+    LiveModule,
   ],
 })
 export class AppModule {}
