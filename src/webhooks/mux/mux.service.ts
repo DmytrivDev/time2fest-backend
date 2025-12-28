@@ -12,8 +12,14 @@ export class MuxWebhookService {
       case "video.live_stream.connected":
         return this.onLiveConnected(event);
 
-      case "video.live_stream.idle":
-        return this.onLiveEnded(event);
+      case "video.live_stream.active":
+        return this.onLiveActive(event);
+
+      case "video.live_stream.disconnected":
+        return this.onLiveDisconnected(event);
+
+      case "video.asset.created":
+        return this.onAssetCreated(event);
 
       case "video.asset.ready":
         return this.onAssetReady(event);
@@ -23,54 +29,67 @@ export class MuxWebhookService {
     }
   }
 
-  /**
-   * ▶ Live реально стартував
-   * trstatus = process
-   */
+  /** ▶ LIVE START */
   private async onLiveConnected(event: any) {
-    const muxLiveStreamId = event.data?.id;
-    if (!muxLiveStreamId) return;
+    const id = event.data?.id;
+    if (!id) return;
 
-    await this.updateLiveStream(muxLiveStreamId, {
+    await this.updateLiveStream(id, {
       trstatus: "process",
     });
   }
 
-  /**
-   * ⏹ Live завершився
-   * trstatus = end
-   */
-  private async onLiveEnded(event: any) {
-    const muxLiveStreamId = event.data?.id;
-    if (!muxLiveStreamId) return;
+  /** ▶ LIVE ACTIVE (fallback для asset id) */
+  private async onLiveActive(event: any) {
+    const id = event.data?.id;
+    const assetId = event.data?.active_asset_id;
 
-    await this.updateLiveStream(muxLiveStreamId, {
+    if (!id || !assetId) return;
+
+    await this.updateLiveStream(id, {
+      active_asset_id: assetId,
+    });
+  }
+
+  /** ⏹ LIVE END */
+  private async onLiveDisconnected(event: any) {
+    const id = event.data?.id;
+    if (!id) return;
+
+    await this.updateLiveStream(id, {
       trstatus: "end",
     });
   }
 
-  /**
-   * 🎬 Запис готовий — ТУТ Є playback_id
-   */
+  /** 🎞 ASSET CREATED → беремо active_asset_id */
+  private async onAssetCreated(event: any) {
+    const liveId = event.data?.live_stream_id;
+    const assetId = event.data?.id;
+
+    if (!liveId || !assetId) return;
+
+    await this.updateLiveStream(liveId, {
+      active_asset_id: assetId,
+    });
+  }
+
+  /** 🎬 ASSET READY → фінальний playback */
   private async onAssetReady(event: any) {
-    const muxLiveStreamId = event.data?.live_stream_id;
+    const liveId = event.data?.live_stream_id;
     const playbackId = event.data?.playback_ids?.[0]?.id;
 
-    if (!muxLiveStreamId || !playbackId) return;
+    if (!liveId || !playbackId) return;
 
-    await this.updateLiveStream(muxLiveStreamId, {
+    await this.updateLiveStream(liveId, {
       mux_playback_id: playbackId,
     });
   }
 
-  /**
-   * 🔁 ОНОВЛЕННЯ STRAPI ПО mux_live_stream_id
-   */
+  /** 🔁 UPDATE STRAPI */
   private async updateLiveStream(
     muxLiveStreamId: string,
     data: Record<string, any>
   ) {
-    // 1️⃣ Знаходимо live-stream
     const result = await this.strapi.get<any[]>(
       `/live-streams?filters[mux_live_stream_id][$eq]=${muxLiveStreamId}`,
       undefined,
@@ -78,20 +97,9 @@ export class MuxWebhookService {
     );
 
     const stream = Array.isArray(result) ? result[0] : null;
+    if (!stream?.documentId) return;
 
-    if (!stream?.documentId) {
-      console.warn(
-        `⚠ LiveStream not found for mux_live_stream_id=${muxLiveStreamId}`
-      );
-      return;
-    }
-
-    // 2️⃣ Оновлюємо через documentId (Strapi v4)
-    await this.strapi.put(`/live-streams/${stream.documentId}`, {
-      data,
-    });
-
-    // 3️⃣ Чистимо кеш
+    await this.strapi.put(`/live-streams/${stream.documentId}`, { data });
     this.strapi.clearCache("live-streams");
   }
 }
