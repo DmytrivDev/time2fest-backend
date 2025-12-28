@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common";
+import axios from "axios";
 import { StrapiService } from "../../services/strapi.service";
+import { getStrapiHeaders, getStrapiUrl } from "../../config/strapi.config";
 
 @Injectable()
 export class MuxWebhookService {
@@ -26,9 +28,6 @@ export class MuxWebhookService {
     }
   }
 
-  /**
-   * ▶ Asset створено — тут вперше є playback_id
-   */
   private async onAssetCreated(event: any) {
     const liveStreamId = event.data?.live_stream_id;
     const assetId = event.data?.id;
@@ -43,9 +42,6 @@ export class MuxWebhookService {
     });
   }
 
-  /**
-   * ▶ Live реально підʼєднався
-   */
   private async onLiveConnected(event: any) {
     const liveStreamId = event.data?.id;
     const assetId = event.data?.active_asset_id;
@@ -58,9 +54,6 @@ export class MuxWebhookService {
     });
   }
 
-  /**
-   * ⏹ Live зупинився
-   */
   private async onLiveEnded(event: any) {
     const liveStreamId = event.data?.id;
     if (!liveStreamId) return;
@@ -70,9 +63,6 @@ export class MuxWebhookService {
     });
   }
 
-  /**
-   * 🎬 Запис завершено
-   */
   private async onAssetCompleted(event: any) {
     const liveStreamId = event.data?.live_stream_id;
     const playbackId = event.data?.playback_ids?.[0]?.id;
@@ -86,20 +76,20 @@ export class MuxWebhookService {
   }
 
   /**
-   * 🔁 Оновлення LiveStream у Strapi по mux_live_stream_id
+   * 🔁 ОНОВЛЕННЯ STRAPI ЧЕРЕЗ REAL PUT
    */
   private async updateLiveStream(
     muxLiveStreamId: string,
     data: Record<string, any>
   ) {
     // 1️⃣ знайти стрім
-    const result = await this.strapi.get<any[]>(
+    const streams = await this.strapi.get<any[]>(
       `/live-streams?filters[mux_live_stream_id][$eq]=${muxLiveStreamId}`,
       undefined,
       false
     );
 
-    const stream = Array.isArray(result) ? result[0] : null;
+    const stream = Array.isArray(streams) ? streams[0] : null;
 
     if (!stream?.id) {
       console.warn(
@@ -108,10 +98,16 @@ export class MuxWebhookService {
       return;
     }
 
-    // 2️⃣ UPDATE через POST + _method=PUT (Strapi v4)
-    await this.strapi.post(`/live-streams/${stream.id}?_method=PUT`, {
-      data,
-    });
+    // 2️⃣ REAL PUT (ось тут ключ!)
+    const url = getStrapiUrl(`/live-streams/${stream.id}`);
+
+    await axios.put(
+      url,
+      { data },
+      {
+        headers: getStrapiHeaders(),
+      }
+    );
 
     // 3️⃣ очистити кеш
     this.strapi.clearCache("live-streams");
