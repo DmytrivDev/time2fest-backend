@@ -29,6 +29,7 @@ import { DatabaseModule  } from './modules/database/database.module';
 import { OrderModule  } from './modules/order/order.module';
 import { TranslationsModule  } from './modules/translations/translations.module'; 
 import { UsersListModule  } from './modules/users-list/users-list.module'; 
+import { LiveModule  } from './modules/live/live.module'; 
  
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { UsersListModule  } from './modules/users-list/users-list.module';
     OrderModule,
     TranslationsModule,
     UsersListModule,
+    LiveModule,
   ],
 })
 export class AppModule {}
