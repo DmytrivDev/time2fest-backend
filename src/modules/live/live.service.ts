@@ -39,23 +39,15 @@ export class LiveService {
       muxWebrtcLiveId = created.liveId;
       playbackId = created.playbackId;
 
-      await this.repo.saveMuxData(
-        live.id,
-        muxWebrtcLiveId,
-        playbackId
-      );
+      await this.repo.saveMuxData(live.id, muxWebrtcLiveId, playbackId);
     }
 
     // 2️⃣ створюємо ingest
     let ingest;
     try {
-      ingest = await this.mux.createWebrtcIngest(
-        muxWebrtcLiveId
-      );
+      ingest = await this.mux.createWebrtcIngest(muxWebrtcLiveId);
     } catch (e) {
-      throw new InternalServerErrorException(
-        "Failed to create WebRTC ingest"
-      );
+      throw new InternalServerErrorException("Failed to create WebRTC ingest");
     }
 
     // 3️⃣ міняємо статус
