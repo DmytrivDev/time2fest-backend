@@ -10,7 +10,7 @@ export class MuxWebhookService {
 
     switch (event.type) {
       case "video.asset.created":
-        return this.onAssetCreated(event); 
+        return this.onAssetCreated(event);
 
       case "video.live_stream.connected":
         return this.onLiveConnected(event);
@@ -92,24 +92,26 @@ export class MuxWebhookService {
     muxLiveStreamId: string,
     data: Record<string, any>
   ) {
-    const streams = await this.strapi.get<any[]>(
+    const result = await this.strapi.get<any[]>(
       `/live-streams?filters[mux_live_stream_id][$eq]=${muxLiveStreamId}`,
       undefined,
       false
     );
 
-    const stream = Array.isArray(streams) ? streams[0] : null;
+    const stream = Array.isArray(result) ? result[0] : null;
 
-    if (!stream?.id) {
+    if (!stream?.documentId) {
       console.warn(
         `⚠ LiveStream not found for mux_live_stream_id=${muxLiveStreamId}`
       );
       return;
     }
 
-    await this.strapi.put(`/live-streams/${stream.id}`, {
-      data,
-    });
+    await axios.put(
+      getStrapiUrl(`/live-streams/${stream.documentId}`),
+      { data },
+      { headers: getStrapiHeaders() }
+    );
 
     this.strapi.clearCache("live-streams");
   }
