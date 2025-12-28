@@ -1,7 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import axios from "axios";
 import { StrapiService } from "../../services/strapi.service";
-import { getStrapiHeaders, getStrapiUrl } from "../../config/strapi.config";
 
 @Injectable()
 export class MuxWebhookService {
@@ -28,6 +26,9 @@ export class MuxWebhookService {
     }
   }
 
+  /**
+   * ▶ Asset створено — вперше зʼявляється playback_id
+   */
   private async onAssetCreated(event: any) {
     const liveStreamId = event.data?.live_stream_id;
     const assetId = event.data?.id;
@@ -42,6 +43,9 @@ export class MuxWebhookService {
     });
   }
 
+  /**
+   * ▶ Live реально стартував
+   */
   private async onLiveConnected(event: any) {
     const liveStreamId = event.data?.id;
     const assetId = event.data?.active_asset_id;
@@ -54,6 +58,9 @@ export class MuxWebhookService {
     });
   }
 
+  /**
+   * ⏹ Live завершився
+   */
   private async onLiveEnded(event: any) {
     const liveStreamId = event.data?.id;
     if (!liveStreamId) return;
@@ -63,6 +70,9 @@ export class MuxWebhookService {
     });
   }
 
+  /**
+   * 🎬 Запис готовий
+   */
   private async onAssetCompleted(event: any) {
     const liveStreamId = event.data?.live_stream_id;
     const playbackId = event.data?.playback_ids?.[0]?.id;
@@ -76,13 +86,12 @@ export class MuxWebhookService {
   }
 
   /**
-   * 🔁 ОНОВЛЕННЯ STRAPI ЧЕРЕЗ REAL PUT
+   * 🔁 ОНОВЛЕННЯ STRAPI ПО mux_live_stream_id
    */
   private async updateLiveStream(
     muxLiveStreamId: string,
     data: Record<string, any>
   ) {
-    // 1️⃣ знайти стрім
     const streams = await this.strapi.get<any[]>(
       `/live-streams?filters[mux_live_stream_id][$eq]=${muxLiveStreamId}`,
       undefined,
@@ -98,18 +107,10 @@ export class MuxWebhookService {
       return;
     }
 
-    // 2️⃣ REAL PUT (ось тут ключ!)
-    const url = getStrapiUrl(`/live-streams/${stream.id}`);
+    await this.strapi.put(`/live-streams/${stream.id}`, {
+      data,
+    });
 
-    await axios.put(
-      url,
-      { data },
-      {
-        headers: getStrapiHeaders(),
-      }
-    );
-
-    // 3️⃣ очистити кеш
     this.strapi.clearCache("live-streams");
   }
 }

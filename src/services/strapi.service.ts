@@ -11,7 +11,7 @@ export class StrapiService {
     endpoint: string,
     locale?: string,
     useCache = true,
-    withMeta = false // ✅ новий параметр
+    withMeta = false
   ): Promise<T | { data: T; meta: any } | null> {
     let fullPath = endpoint;
 
@@ -23,7 +23,6 @@ export class StrapiService {
     const url = getStrapiUrl(fullPath);
     const cacheKey = `strapi:${fullPath}:meta:${withMeta ? 1 : 0}`;
 
-    // --- Кеш ---
     if (useCache) {
       const cached = this.cache.get<T | { data: T; meta: any }>(cacheKey);
       if (cached) return cached;
@@ -34,16 +33,12 @@ export class StrapiService {
         headers: getStrapiHeaders(),
       });
 
-      // --- Якщо запит з withMeta = true ---
-      let result: any;
-      if (withMeta) {
-        result = {
-          data: response.data?.data ?? response.data ?? null,
-          meta: response.data?.meta ?? null,
-        };
-      } else {
-        result = response.data?.data ?? response.data ?? null;
-      }
+      const result = withMeta
+        ? {
+            data: response.data?.data ?? response.data ?? null,
+            meta: response.data?.meta ?? null,
+          }
+        : response.data?.data ?? response.data ?? null;
 
       if (useCache) {
         this.cache.set(cacheKey, result);
@@ -71,6 +66,27 @@ export class StrapiService {
     } catch (error: any) {
       console.error(
         `❌ StrapiService.post(${endpoint}) failed:`,
+        error?.response?.data || error.message
+      );
+      return null;
+    }
+  }
+
+  /**
+   * ✅ REAL PUT ДЛЯ STRAPI v4
+   */
+  async put<T>(endpoint: string, body: any): Promise<T | null> {
+    const url = getStrapiUrl(endpoint);
+
+    try {
+      const { data } = await axios.put<{ data: T }>(url, body, {
+        headers: getStrapiHeaders(),
+      });
+
+      return data.data;
+    } catch (error: any) {
+      console.error(
+        `❌ StrapiService.put(${endpoint}) failed:`,
         error?.response?.data || error.message
       );
       return null;
