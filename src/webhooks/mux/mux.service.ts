@@ -39,23 +39,24 @@ export class MuxWebhookService {
     });
   }
 
-  /** ▶ LIVE ACTIVE (LIVE playback + asset) */
+  /** ▶ LIVE ACTIVE (live playback) */
   private async onLiveActive(event: any) {
     const muxLiveStreamId = event.data?.id;
     if (!muxLiveStreamId) return;
 
     const updateData: Record<string, any> = {};
 
-    if (event.data?.active_asset_id) {
-      updateData.active_asset_id = event.data.active_asset_id;
-    }
-
     const livePlaybackId = event.data?.playback_ids?.[0]?.id;
     if (livePlaybackId) {
       updateData.live_playback_id = livePlaybackId;
     }
 
-    if (Object.keys(updateData).length === 0) return;
+    const activeAssetId = event.data?.active_asset_id;
+    if (activeAssetId) {
+      updateData.active_asset_id = activeAssetId;
+    }
+
+    if (!Object.keys(updateData).length) return;
 
     await this.updateLiveStream(muxLiveStreamId, updateData);
   }
@@ -70,7 +71,7 @@ export class MuxWebhookService {
     });
   }
 
-  /** 🎞 ASSET CREATED (fallback asset id) */
+  /** 🎞 ASSET CREATED (fallback asset) */
   private async onAssetCreated(event: any) {
     const muxLiveStreamId = event.data?.live_stream_id;
     const assetId = event.data?.id;
@@ -94,21 +95,22 @@ export class MuxWebhookService {
     });
   }
 
-  /** 🔁 UPDATE STRAPI */
+  // =========================
+  // INTERNAL
+  // =========================
+
   private async updateLiveStream(
     muxLiveStreamId: string,
     data: Record<string, any>
   ) {
-    const result = await this.strapi.get<any[]>(
-      `/live-streams?filters[mux_live_stream_id][$eq]=${muxLiveStreamId}`,
-      undefined,
-      false
+    // 🚨 LIVE = NO CACHE
+    const result = await this.strapi.getNoCache<any[]>(
+      `/live-streams?filters[mux_live_stream_id][$eq]=${muxLiveStreamId}`
     );
 
     const stream = Array.isArray(result) ? result[0] : null;
     if (!stream?.documentId) return;
 
     await this.strapi.put(`/live-streams/${stream.documentId}`, { data });
-    this.strapi.clearCache("live-streams");
   }
 }

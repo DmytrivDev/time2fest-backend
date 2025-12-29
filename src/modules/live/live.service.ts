@@ -2,7 +2,7 @@
 
 import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { StrapiService } from "../../services/strapi.service";
-import { normalizeLiveStream } from "./live.normalize"; // 👈 ВАЖЛИВО
+import { normalizeLiveStream } from "./live.normalize";
 
 @Injectable()
 export class LiveService {
@@ -20,16 +20,16 @@ export class LiveService {
       }
 
       if (timeZoneCode) {
-        const fixedZone = timeZoneCode.replace(" ", "+");
-        qs.set("filters[time_zone][code][$eq]", fixedZone);
+        qs.set("filters[time_zone][code][$eq]", timeZoneCode.replace(" ", "+"));
       }
 
       const url = `live-streams?${qs.toString()}`;
-      console.log("🎥 Fetch live streams:", url);
+      console.log("🎥 Fetch LIVE streams (NO CACHE):", url);
 
-      const resp: any = await this.strapi.get(url, undefined, true, true);
+      // 🚨 LIVE = NO CACHE
+      const resp: any = await this.strapi.getNoCache(url);
 
-      const data = resp?.data?.data ?? resp?.data ?? resp ?? [];
+      const data = resp?.data ?? resp ?? [];
 
       return {
         items: Array.isArray(data)
