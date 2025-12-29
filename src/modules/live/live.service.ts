@@ -29,9 +29,9 @@ export class LiveService {
       // 🚨 LIVE = NO CACHE
       const resp: any = await this.strapi.getNoCache(url);
 
-      const data = resp?.data ?? resp ?? [];
+      const data = resp?.data ?? resp ?? []; 
 
-      return {
+      return { 
         items: Array.isArray(data)
           ? data.map((item) => normalizeLiveStream(item))
           : [],
