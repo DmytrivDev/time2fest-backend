@@ -20,10 +20,16 @@ export class TranslationsService {
       }
 
       if (timeZoneCode) {
-        // 🔴 КЛЮЧОВИЙ ФІКС
-        const fixedZone = timeZoneCode.replace(" ", "+");
+        const zones = timeZoneCode
+          .split(",")
+          .map((z) => z.trim().replace(" ", "+"))
+          .filter(Boolean);
 
-        qs.set("filters[time_zone][code][$eq]", fixedZone);
+        if (zones.length === 1) {
+          qs.set("filters[time_zone][code][$eq]", zones[0]);
+        } else if (zones.length > 1) {
+          qs.set("filters[time_zone][code][$in]", zones.join(","));
+        }
       }
 
       const url = `translations?${qs.toString()}`;

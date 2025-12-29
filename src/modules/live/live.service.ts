@@ -20,7 +20,16 @@ export class LiveService {
       }
 
       if (timeZoneCode) {
-        qs.set("filters[time_zone][code][$eq]", timeZoneCode.replace(" ", "+"));
+        const zones = timeZoneCode
+          .split(",")
+          .map((z) => z.trim().replace(" ", "+"))
+          .filter(Boolean);
+
+        if (zones.length === 1) {
+          qs.set("filters[time_zone][code][$eq]", zones[0]);
+        } else if (zones.length > 1) {
+          qs.set("filters[time_zone][code][$in]", zones.join(","));
+        }
       }
 
       const url = `live-streams?${qs.toString()}`;
@@ -29,9 +38,9 @@ export class LiveService {
       // 🚨 LIVE = NO CACHE
       const resp: any = await this.strapi.getNoCache(url);
 
-      const data = resp?.data ?? resp ?? []; 
+      const data = resp?.data ?? resp ?? [];
 
-      return { 
+      return {
         items: Array.isArray(data)
           ? data.map((item) => normalizeLiveStream(item))
           : [],
