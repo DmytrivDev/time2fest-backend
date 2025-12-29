@@ -25,11 +25,9 @@ export class TranslationsService {
           .map((z) => z.trim().replace(" ", "+"))
           .filter(Boolean);
 
-        if (zones.length === 1) {
-          qs.set("filters[time_zone][code][$eq]", zones[0]);
-        } else if (zones.length > 1) {
-          qs.set("filters[time_zone][code][$in]", zones.join(","));
-        }
+        zones.forEach((zone, index) => {
+          qs.set(`filters[$or][${index}][time_zone][code][$eq]`, zone);
+        });
       }
 
       const url = `translations?${qs.toString()}`;
