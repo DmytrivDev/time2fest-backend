@@ -29,34 +29,34 @@ export class MuxWebhookService {
     }
   }
 
-  /** ▶ LIVE CONNECTED */
+  /** ▶ LIVE CONNECTED
+   * RTMP підʼєднався, але playback ще може не існувати
+   * Статус НЕ міняємо
+   */
   private async onLiveConnected(event: any) {
-    const muxLiveStreamId = event.data?.id;
-    if (!muxLiveStreamId) return;
-
-    await this.updateLiveStream(muxLiveStreamId, {
-      trstatus: "process",
-    });
+    // навмисно нічого не робимо
+    return;
   }
 
-  /** ▶ LIVE ACTIVE (live playback) */
+  /** ▶ LIVE ACTIVE
+   * LIVE вважається активним ТІЛЬКИ коли є live_playback_id
+   */
   private async onLiveActive(event: any) {
     const muxLiveStreamId = event.data?.id;
     if (!muxLiveStreamId) return;
 
-    const updateData: Record<string, any> = {};
-
     const livePlaybackId = event.data?.playback_ids?.[0]?.id;
-    if (livePlaybackId) {
-      updateData.live_playback_id = livePlaybackId;
-    }
+    if (!livePlaybackId) return;
+
+    const updateData: Record<string, any> = {
+      trstatus: "process",               // ✅ LIVE СТАЄ АКТИВНИМ ТУТ
+      live_playback_id: livePlaybackId,
+    };
 
     const activeAssetId = event.data?.active_asset_id;
     if (activeAssetId) {
       updateData.active_asset_id = activeAssetId;
     }
-
-    if (!Object.keys(updateData).length) return;
 
     await this.updateLiveStream(muxLiveStreamId, updateData);
   }
