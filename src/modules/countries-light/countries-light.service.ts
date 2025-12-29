@@ -34,7 +34,7 @@ export class CountriesLightService {
           const url = `countries?${params.toString()}`;
           console.log(`🌍 [Light] Fetching "${slug}" → ${url}`);
 
-          const resp: any = await this.strapi.get(url, undefined, true, true);
+          const resp: any = await this.strapi.get(url, undefined, true);
           const data = resp?.data?.[0] ?? resp?.[0] ?? null;
 
           if (!data) {

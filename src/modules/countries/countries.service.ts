@@ -47,7 +47,7 @@ export class CountriesService {
       const url = `/countries?${params.toString()}`;
       console.log("🌍 Fetching countries:", url);
 
-      const resp: any = await this.strapi.get(url, undefined, true, true);
+      const resp: any = await this.strapi.get(url, undefined, true);
 
       // --- 🧠 Універсальний парсер Strapi-відповіді ---
       const data =

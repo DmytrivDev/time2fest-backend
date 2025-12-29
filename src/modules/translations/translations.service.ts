@@ -29,7 +29,7 @@ export class TranslationsService {
       const url = `translations?${qs.toString()}`;
       console.log("🎥 Fetch translations:", url);
 
-      const resp: any = await this.strapi.get(url, undefined, true, true);
+      const resp: any = await this.strapi.get(url, undefined, true);
 
       const data = resp?.data?.data ?? resp?.data ?? resp ?? [];
 

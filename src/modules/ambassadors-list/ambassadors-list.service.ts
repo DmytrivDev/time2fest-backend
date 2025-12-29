@@ -44,7 +44,7 @@ export class AmbassadorsListService {
 
       // --- Запит ---
       const url = `/ambassadors-lists?${qs.toString()}`;
-      const resp: any = await this.strapi.get(url, undefined, true, true);
+      const resp: any = await this.strapi.get(url, undefined, true);
 
       const data = resp?.data?.data ?? resp?.data ?? resp ?? [];
       const meta = resp?.meta ??
