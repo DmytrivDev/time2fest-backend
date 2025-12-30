@@ -12,6 +12,7 @@ export class LiveController {
   async getAll(
     @Query("country") country?: string,
     @Query("timeZone") timeZone?: string,
+    @Query("ambassador") ambassadorSlug?: string,
     @Res({ passthrough: true }) res?: Response
   ) {
     // 🚨 Заборона кешу на HTTP / CDN рівні
@@ -22,6 +23,6 @@ export class LiveController {
     res?.setHeader("Pragma", "no-cache");
     res?.setHeader("Expires", "0");
 
-    return this.liveService.getAll(country, timeZone);
+    return this.liveService.getAll(country, timeZone, ambassadorSlug);
   }
 }

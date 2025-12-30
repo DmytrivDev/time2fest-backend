@@ -8,17 +8,23 @@ import { normalizeLiveStream } from "./live.normalize";
 export class LiveService {
   constructor(private readonly strapi: StrapiService) {}
 
-  async getAll(countrySlug?: string, timeZoneCode?: string) {
+  async getAll(
+    countrySlug?: string,
+    timeZoneCode?: string,
+    ambassadorSlug?: string
+  ) {
     try {
       const qs = new URLSearchParams();
 
       qs.set("populate", "*");
       qs.set("pagination[pageSize]", "300");
 
+      // 🌍 Country filter
       if (countrySlug) {
         qs.set("filters[country][slug][$eq]", countrySlug.toLowerCase());
       }
 
+      // ⏱ Time zones (multi через $or)
       if (timeZoneCode) {
         const zones = timeZoneCode
           .split(",")
@@ -28,6 +34,11 @@ export class LiveService {
         zones.forEach((zone, index) => {
           qs.set(`filters[$or][${index}][time_zone][code][$eq]`, zone);
         });
+      }
+
+      // 🎤 Ambassador relation (slug)
+      if (ambassadorSlug) {
+        qs.set("filters[ambassador][slug][$eq]", ambassadorSlug.toLowerCase());
       }
 
       const url = `live-streams?${qs.toString()}`;

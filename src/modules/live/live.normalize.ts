@@ -13,6 +13,11 @@ export function normalizeLiveStream(item: any) {
     attrs.time_zone ??
     null;
 
+  const ambassador =
+    attrs.ambassador?.data?.attributes ??
+    attrs.ambassador ??
+    null;
+
   const titleComponent = attrs.title ?? {};
 
   return {
@@ -28,14 +33,20 @@ export function normalizeLiveStream(item: any) {
     },
 
     active_asset_id: attrs.active_asset_id ?? null,
-
     mux_playback_id: attrs.mux_playback_id ?? null,
-
-    // 🔥 ОСЬ ВАЖЛИВО
     live_playback_id: attrs.live_playback_id ?? null,
 
-    country: country ? { slug: country.slug ?? "" } : null,
+    country: country
+      ? { slug: country.slug ?? "" }
+      : null,
 
-    timeZone: timeZone ? { code: timeZone.code ?? "" } : null,
+    timeZone: timeZone
+      ? { code: timeZone.code ?? "" }
+      : null,
+
+    // 🔥 НОВЕ
+    ambassador: ambassador
+      ? { slug: ambassador.slug ?? "" }
+      : null,
   };
 }
